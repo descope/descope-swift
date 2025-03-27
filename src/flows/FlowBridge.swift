@@ -16,12 +16,16 @@ protocol FlowBridgeDelegate: AnyObject {
 enum FlowBridgeRequest {
     case oauthNative(clientId: String, stateId: String, nonce: String, implicit: Bool)
     case webAuth(variant: String, startURL: URL, finishURL: URL?)
+    case beforeScreen(screen: String, context: [String: Any])
+    case afterScreen(screen: String)
 }
 
 enum FlowBridgeResponse {
     case oauthNative(stateId: String, authorizationCode: String?, identityToken: String?, user: String?)
     case webAuth(variant: String, exchangeCode: String)
     case magicLink(url: String)
+    case beforeScreen(override: Bool)
+    case resumeScreen(interactionId: String, form: [String: Any])
     case failure(String)
 }
 
@@ -251,6 +255,12 @@ private extension FlowBridgeRequest {
                 finishURL = url
             }
             self = .webAuth(variant: type, startURL: startURL, finishURL: finishURL)
+        case "beforeScreen":
+            guard let screen = payload["screen"] as? String, let context = payload["context"] as? [String: Any] else { return nil }
+            self = .beforeScreen(screen: screen, context: context)
+        case "afterScreen":
+            guard let screen = payload["screen"] as? String else { return nil }
+            self = .afterScreen(screen: screen)
         default:
             return nil
         }
@@ -263,6 +273,8 @@ private extension FlowBridgeResponse {
         case .oauthNative: return "oauthNative"
         case .webAuth(let variant, _): return variant
         case .magicLink: return "magicLink"
+        case .beforeScreen: return "beforeScreen"
+        case .resumeScreen: return "resumeScreen"
         case .failure: return "failure"
         }
     }
@@ -296,6 +308,15 @@ private extension FlowBridgeResponse {
         case let .magicLink(url):
             return [
                 "url": url
+            ]
+        case let .beforeScreen(override):
+            return [
+                "override": override
+            ]
+        case let .resumeScreen(interactionId, form):
+            return [
+                "interactionId": interactionId,
+                "form": form,
             ]
         case let .failure(failure):
             return [
@@ -359,7 +380,7 @@ function \(namespace)_find() {
 function \(namespace)_init(component) {
     component.nativeOptions = {
         platform: 'ios',
-        bridgeVersion: 1,
+        bridgeVersion: 2,
         oauthRedirect: '\(WebAuth.redirectURL)',
         ssoRedirect: '\(WebAuth.redirectURL)',
     }

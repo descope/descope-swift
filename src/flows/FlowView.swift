@@ -20,6 +20,12 @@ public protocol DescopeFlowViewDelegate: AnyObject {
     /// and do a quick animatad transition to show the flow once this method is called.
     func flowViewDidBecomeReady(_ flowView: DescopeFlowView)
 
+    ///
+    func flowViewWillShowScreen(_ flowView: DescopeFlowView, screen: String, context: [String: Any]) async -> Bool
+
+    ///
+    func flowViewDidShowScreen(_ flowView: DescopeFlowView, screen: String)
+
     /// Called when the user taps on a web link in the flow.
     ///
     /// The `external` parameter is `true` if the link would open in a new browser tab
@@ -169,6 +175,12 @@ open class DescopeFlowView: UIView {
         coordinator.start(flow: flow)
     }
 
+    // Custom Screens
+
+    public func resumeScreen(interactionId: String, form: [String: Any]) {
+        coordinator.resumeScreen(interactionId: interactionId, form: form)
+    }
+
     // WebView
 
     private lazy var webView: WKWebView = createWebView()
@@ -221,6 +233,13 @@ open class DescopeFlowView: UIView {
     open func didBecomeReady() {
     }
 
+    open func willShowScreen(_ screen: String, context: [String: Any]) async -> Bool {
+        return true
+    }
+
+    open func didShowScreen(_ screen: String) {
+    }
+
     /// Override this method if your subclass needs to do something when the user taps
     /// on a web link in the flow.
     ///
@@ -261,6 +280,18 @@ private class FlowCoordinatorDelegateProxy: DescopeFlowCoordinatorDelegate {
         guard let view else { return }
         view.didBecomeReady()
         view.delegate?.flowViewDidBecomeReady(view)
+    }
+
+    func coordinatorWillShowScreen(_ coordinator: DescopeFlowCoordinator, screen: String, context: [String: Any]) async -> Bool {
+        guard let view else { return true }
+        guard await view.willShowScreen(screen, context: context) else { return false }
+        return await view.delegate?.flowViewWillShowScreen(view, screen: screen, context: context) ?? true
+    }
+
+    func coordinatorDidShowScreen(_ coordinator: DescopeFlowCoordinator, screen: String) {
+        guard let view else { return }
+        view.didShowScreen(screen)
+        view.delegate?.flowViewDidShowScreen(view, screen: screen)
     }
 
     func coordinatorDidInterceptNavigation(_ coordinator: DescopeFlowCoordinator, url: URL, external: Bool) {

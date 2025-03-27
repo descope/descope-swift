@@ -164,6 +164,15 @@ open class DescopeFlowViewController: UIViewController {
         delegate?.flowViewControllerDidCancel(self)
     }
 
+    // Custom Screens
+
+    open func willShowScreen(_ screen: String, context: [String: Any]) async -> Bool {
+        return true
+    }
+
+    open func didShowScreen(_ screen: String) {
+    }
+
     // Internal
 
     private lazy var underlyingView = createFlowView()
@@ -196,6 +205,14 @@ extension DescopeFlowViewController: DescopeFlowViewDelegate {
         if open {
             UIApplication.shared.open(url)
         }
+    }
+
+    public func flowViewWillShowScreen(_ flowView: DescopeFlowView, screen: String, context: [String: Any]) async -> Bool {
+        return await willShowScreen(screen, context: context)
+    }
+
+    public func flowViewDidShowScreen(_ flowView: DescopeFlowView, screen: String) {
+        didShowScreen(screen)
     }
 
     public func flowViewDidFail(_ flowView: DescopeFlowView, error: DescopeError) {

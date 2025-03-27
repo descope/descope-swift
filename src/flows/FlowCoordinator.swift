@@ -18,6 +18,12 @@ public protocol DescopeFlowCoordinatorDelegate: AnyObject {
     /// and do a quick animatad transition to show the flow once this method is called.
     func coordinatorDidBecomeReady(_ coordinator: DescopeFlowCoordinator)
 
+    ///
+    func coordinatorWillShowScreen(_ coordinator: DescopeFlowCoordinator, screen: String, context: [String: Any]) async -> Bool
+
+    ///
+    func coordinatorDidShowScreen(_ coordinator: DescopeFlowCoordinator, screen: String)
+
     /// Called when the user taps on a web link in the flow.
     ///
     /// The `external` parameter is `true` if the link would open in a new browser tab
@@ -124,7 +130,7 @@ public class DescopeFlowCoordinator {
 
     private func loadURL(_ url: String) {
         let url = URL(string: url) ?? URL(string: "invalid://")!
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData)
         if let timeout = flow?.requestTimeoutInterval {
             request.timeoutInterval = timeout
         }
@@ -167,6 +173,13 @@ public class DescopeFlowCoordinator {
     /// - Parameter code: The JavaScript code to run, e.g., `"console.log('Hello world')"`.
     public func runJavaScript(_ code: String) {
         bridge.runJavaScript(code)
+    }
+
+    // Custom Screens
+
+    public func resumeScreen(interactionId: String, form: [String: Any]) {
+        logger(.info, "Resuming screen")
+        bridge.send(response: .resumeScreen(interactionId: interactionId, form: form))
     }
 
     // Hooks
@@ -255,12 +268,21 @@ public class DescopeFlowCoordinator {
     }
 
     private func handleRequest(_ request: FlowBridgeRequest) {
-        guard ensureState(.ready) else { return }
+        guard ensureState(.started, .ready) else { return }
         switch request {
         case let .oauthNative(clientId, stateId, nonce, implicit):
             handleOAuthNative(clientId: clientId, stateId: stateId, nonce: nonce, implicit: implicit)
         case let .webAuth(variant, startURL, finishURL):
             handleWebAuth(variant: variant, startURL: startURL, finishURL: finishURL)
+        case let .beforeScreen(screen, context):
+            Task {
+                let show = await delegate?.coordinatorWillShowScreen(self, screen: screen, context: context) ?? true
+                logger(.debug, show ? "Will show screen" : "Will show custom screen", screen)
+                bridge.send(response: .beforeScreen(override: !show))
+            }
+        case let .afterScreen(screen):
+            logger(.debug, "Did show screen", screen)
+            delegate?.coordinatorDidShowScreen(self, screen: screen)
         }
     }
 
