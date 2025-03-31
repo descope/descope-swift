@@ -8,6 +8,9 @@ public protocol DescopeSessionLifecycle: AnyObject {
     /// Holds the latest session value for the session manager.
     var session: DescopeSession? { get set }
     
+    /// The ``DescopeSessionManagerDelegate`` will notify the session manager of any changes.
+    var sessionManagerDelegate: DescopeSessionManagerDelegate? { get set }
+    
     /// Called by the session manager to conditionally refresh the active session.
     func refreshSessionIfNeeded() async throws -> Bool
 }
@@ -22,6 +25,7 @@ public class SessionLifecycle: DescopeSessionLifecycle {
     public let auth: DescopeAuth
     public let storage: DescopeSessionStorage
     public let logger: DescopeLogger?
+    public var sessionManagerDelegate: DescopeSessionManagerDelegate?
 
     public init(auth: DescopeAuth, storage: DescopeSessionStorage, logger: DescopeLogger?) {
         self.auth = auth
@@ -49,6 +53,7 @@ public class SessionLifecycle: DescopeSessionLifecycle {
             if let session, session.refreshToken.isExpired {
                 logger(.debug, "Session has an expired refresh token", session.refreshToken.expiresAt)
             }
+            sessionManagerDelegate?.sessionDidChange(session)
         }
     }
     
