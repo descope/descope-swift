@@ -1,6 +1,19 @@
 
 import Foundation
 
+/// The ``DescopeSessionManagerDelegate`` protocol is used to listen for
+/// session changes.
+///
+/// The listener is called when the session is set or cleared, and when the
+/// session is refreshed.
+public protocol DescopeSessionManagerDelegate: AnyObject {
+    /// Called when the session is set, refreshed or cleared.
+    ///
+    /// It will be called with the changed ``DescopeSession``
+    /// or `nil` if the session was cleared
+    func sessionDidChange(_ session: DescopeSession?)
+}
+
 /// The ``DescopeSessionManager`` class is used to manage an authenticated
 /// user session for an application.
 ///
@@ -75,6 +88,11 @@ public class DescopeSessionManager {
     
     /// The object that handles session lifecycle for this manager.
     private let lifecycle: DescopeSessionLifecycle
+    
+    /// The delegate can be used to get notified when session changes.
+    public var delegate: DescopeSessionManagerDelegate? {
+        return lifecycle.sessionManagerDelegate
+    }
 
     /// The active ``DescopeSession`` managed by this object.
     public var session: DescopeSession? {
