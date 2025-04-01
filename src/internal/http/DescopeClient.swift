@@ -533,11 +533,24 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
     }
     
     override var defaultHeaders: [String: String] {
-        return [
+        let systemInfo = SystemInfo()
+        var headers = [
             "Authorization": "Bearer \(config.projectId)",
             "x-descope-sdk-name": "swift",
             "x-descope-sdk-version": DescopeSDK.version,
+            "x-descope-platform-name": systemInfo.osName,
+            "x-descope-platform-version": systemInfo.osVersion,
         ]
+        if let appName = systemInfo.appName {
+            headers["x-descope-app-name"] = appName
+        }
+        if let appVersion = systemInfo.appVersion {
+            headers["x-descope-app-version"] = appVersion
+        }
+        if let device = systemInfo.device {
+            headers["x-descope-device"] = device
+        }
+        return headers
     }
     
     override func errorForResponseData(_ data: Data) -> Error? {
