@@ -39,6 +39,16 @@ public protocol DescopeAuth: Sendable {
     /// - Returns: A new ``RefreshResponse`` with a refreshed `sessionJwt`.
     func refreshSession(refreshJwt: String) async throws -> RefreshResponse
     
+    /// Same as ``refreshSession(refreshJwt:)`` but based on an external token.
+    ///
+    /// - Important: This function is only available if the Descope console
+    ///     was configured to allow external tokens. If not, this function will fail.
+    ///
+    /// - Parameter externalToken: the external token to exchange.
+    ///
+    /// - Returns: A new ``RefreshResponse`` if the exchange was successful.
+    func exchangeExternalToken(externalToken: String) async throws -> RefreshResponse
+    
     /// Revokes active sessions for the user.
     ///
     /// It's a good security practice to remove refresh JWTs from the Descope servers if

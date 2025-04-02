@@ -17,6 +17,10 @@ final class Auth: DescopeAuth {
     func refreshSession(refreshJwt: String) async throws -> RefreshResponse {
         return try await client.refresh(refreshJwt: refreshJwt).convert()
     }
+    
+    func exchangeExternalToken(externalToken: String) async throws -> RefreshResponse {
+        return try await client.refresh(externalToken: externalToken).convert()
+    }
 
     func revokeSessions(_ revoke: RevokeType, refreshJwt: String) async throws {
         try await client.logout(type: revoke, refreshJwt: refreshJwt)

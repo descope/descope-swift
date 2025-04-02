@@ -10,6 +10,9 @@ public protocol DescopeSessionLifecycle: AnyObject {
     
     /// Called by the session manager to conditionally refresh the active session.
     func refreshSessionIfNeeded() async throws -> Bool
+    
+    /// Called by the session manager to exchange an external token for a session.
+    func createSessionFromExternalToken(externalToken: String) async throws -> DescopeSession
 }
 
 /// The default implementation of the ``DescopeSessionLifecycle`` protocol.
@@ -65,6 +68,14 @@ public class SessionLifecycle: DescopeSessionLifecycle {
 
         session?.updateTokens(with: response)
         return true
+    }
+    
+    public func createSessionFromExternalToken(externalToken: String) async throws -> DescopeSession {
+        logger(.info, "Exchanging an external token for a Descope session")
+        let response = try await auth.exchangeExternalToken(externalToken: externalToken)
+        guard let refreshJwt = response.refreshToken?.jwt else { throw DescopeError.externalTokenError.with(desc: "No refresh token returned when exchanging external token") }
+        let user = try await auth.me(refreshJwt: refreshJwt)
+        return try DescopeSession(sessionJwt: response.sessionToken.jwt, refreshJwt: refreshJwt, user: user)
     }
     
     // Conditional refresh

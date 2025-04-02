@@ -398,8 +398,12 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         ])
     }
 
-    func refresh(refreshJwt: String) async throws -> JWTResponse {
-        return try await post("auth/refresh", headers: authorization(with: refreshJwt))
+    func refresh(refreshJwt: String? = nil, externalToken: String? = nil) async throws -> JWTResponse {
+        var body: [String: Any?] = [:]
+        if let externalToken {
+            body["externalToken"] = externalToken
+        }
+        return try await post("auth/refresh", headers: authorization(with: refreshJwt), body: body)
     }
     
     func logout(type: RevokeType, refreshJwt: String) async throws {
