@@ -95,8 +95,6 @@ extension DescopeError {
     
     public static let webAuthFailed = DescopeError.sdkError("S130001", "Web authentication failed")
     public static let webAuthCancelled = DescopeError.sdkError("S130002", "Web authentication cancelled")
-    
-    public static let externalTokenError = DescopeError.sdkError("S140001", "Failed to exchange external token")
 }
 
 /// Extension functions for catching ``DescopeError`` values.

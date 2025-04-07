@@ -117,17 +117,6 @@ public class DescopeSessionManager {
         lifecycle.session = session
         saveSession()
     }
-    
-    /// Same as ``manageSession(_:)`` but accepts an external token as the base for the ``DescopeSession``.
-    ///
-    /// The parameter token is exchanged for a Descope session.
-    ///
-    /// - Important: This function is only available if the Descope console
-    ///       was configured to allow external tokens. If not, this function will fail.
-    public func manageSessionFromExternalToken(_ externalToken: String) async throws {
-        lifecycle.session = try await lifecycle.createSessionFromExternalToken(externalToken: externalToken)
-        saveSession()
-    }
 
     /// Clears any active ``DescopeSession`` from this manager and removes it
     /// from the keychain.
