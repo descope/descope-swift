@@ -167,11 +167,8 @@ private extension Dictionary {
 
 // HTTP Headers
 
-private let userAgent = makeUserAgent()
-
 private func mergeHeaders(_ headers: [String: String], with defaults: [String: String], for request: URLRequest) -> [String: String] {
     var result = request.allHTTPHeaderFields ?? [:]
-    result["User-Agent"] = userAgent
     if request.httpBody != nil {
         result["Content-Type"] = "application/json"
     }

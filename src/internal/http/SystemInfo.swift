@@ -1,58 +1,56 @@
 import Foundation
 
-class SystemInfo {
+enum SystemInfo {
+    static let osName = makeOSName()
+    static let osVersion = makeOSVersion()
+    static let appName = makeAppName()
+    static let appVersion = makeAppVersion()
+    static let device = makeDevice()
+}
+
+private func makeOSName() -> String {
     #if os(iOS)
-    let osName = "iOS"
-    let osSysctl = "hw.machine"
+    return "iOS"
     #else
-    let osName = "macOS"
-    let osSysctl = "hw.model"
+    return "macOS"
     #endif
-    
-    let osVersion: String
-    let appName: String?
-    let appVersion: String?
-    let device: String?
-    
-    init() {
-        osVersion = SystemInfo.computeOSVersion()
-        appName = SystemInfo.computeAppName()
-        appVersion = SystemInfo.computeAppVersion()
-        device = SystemInfo.computeDevice(osSysctl: osSysctl)
-    }
-    
-    private static func computeOSVersion() -> String {
-        let ver = ProcessInfo.processInfo.operatingSystemVersion
-        return "\(ver.majorVersion).\(ver.minorVersion).\(ver.patchVersion)"
-    }
-    
-    private static func computeAppName() -> String? {
-        if let appName = Bundle.main.object(forInfoDictionaryKey: kCFBundleNameKey as String) as? String {
-            return appName
-        }
-        return nil
-    }
-    
-    private static func computeAppVersion() -> String? {
-        if let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
-            return appVersion
-        }
-        return nil
-    }
-    
-    private static func computeDevice(osSysctl: String) -> String? {
-        #if targetEnvironment(simulator)
-        return "Simulator"
-        #else
-        // get the size of the value first
-        var size = 0
-        guard sysctlbyname(osSysctl, nil, &size, nil, 0) == 0, size > 0 else { return nil }
-        
-        // create an appropriately sized array and call again to retrieve the value
-        var chars = [CChar](repeating: 0, count: size)
-        guard sysctlbyname(osSysctl, &chars, &size, nil, 0) == 0 else { return nil }
-        
-        return String(utf8String: chars)
-        #endif
-    }
+}
+
+private func makeOSVersion() -> String {
+    let ver = ProcessInfo.processInfo.operatingSystemVersion
+    return "\(ver.majorVersion).\(ver.minorVersion).\(ver.patchVersion)"
+}
+
+private func makeAppName() -> String? {
+    return Bundle.main.object(forInfoDictionaryKey: kCFBundleNameKey as String) as? String
+}
+
+private func makeAppVersion() -> String? {
+    guard let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String, !version.isEmpty else { return nil }
+    guard let build = Bundle.main.object(forInfoDictionaryKey: kCFBundleVersionKey as String) as? String, !build.isEmpty else { return nil }
+    return "\(version).\(build)"
+}
+
+private func makeDevice() -> String? {
+    #if targetEnvironment(simulator)
+    return "Simulator"
+    #else
+    // use different ioctl name according to os
+    #if os(iOS)
+    let ioctl = "hw.machine"
+    #else
+    let ioctl = "hw.model"
+    #endif
+
+    // get the size of the value first
+    var size = 0
+    guard sysctlbyname(ioctl, nil, &size, nil, 0) == 0, size > 0 else { return nil }
+
+    // create an appropriately sized array and call again to retrieve the value
+    var chars = [CChar](repeating: 0, count: size)
+    guard sysctlbyname(ioctl, &chars, &size, nil, 0) == 0 else { return nil }
+
+    // the device model, e.g., "MacBookPro18,4" or "iPhone17,2"
+    return String(utf8String: chars)
+    #endif
 }
