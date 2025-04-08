@@ -32,7 +32,8 @@ public protocol DescopeFlowViewControllerDelegate: AnyObject {
     /// Called when the flow is cancelled.
     ///
     /// The flow is cancelled either by the user tapping the Cancel button in the navigation bar,
-    /// or if the ``DescopeFlowViewController/cancel()`` method is called programmatically.
+    /// if the ``DescopeFlowViewController/cancel()`` method is called programmatically, or if
+    /// the flow fails with a ``DescopeError/flowCancelled`` error.
     func flowViewControllerDidCancel(_ controller: DescopeFlowViewController)
 
     /// Called when an error occurs in the flow.
@@ -197,7 +198,11 @@ extension DescopeFlowViewController: DescopeFlowViewDelegate {
     }
 
     public func flowViewDidFail(_ flowView: DescopeFlowView, error: DescopeError) {
-        delegate?.flowViewControllerDidFail(self, error: error)
+        if error == .flowCancelled {
+            delegate?.flowViewControllerDidCancel(self)
+        } else {
+            delegate?.flowViewControllerDidFail(self, error: error)
+        }
     }
     
     public func flowViewDidFinish(_ flowView: DescopeFlowView, response: AuthenticationResponse) {

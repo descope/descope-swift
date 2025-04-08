@@ -102,10 +102,20 @@ extension FlowBridge: WKScriptMessageHandler {
                 return
             }
             delegate?.bridgeDidReceiveRequest(self, request: request)
+        case .abort:
+            if let reason = message.body as? String, !reason.isEmpty {
+                logger(.error, "Bridge received abort event with failure reason")
+                delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowFailed.with(message: reason))
+            } else {
+                logger(.info, "Bridge received abort event for cancellation")
+                delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowCancelled)
+            }
         case .failure:
             logger(.error, "Bridge received failure event", message.body)
             if let dict = message.body as? [String: Any], let error = DescopeError(errorResponse: dict) {
                 delegate?.bridgeDidFailAuthentication(self, error: error)
+            } else if let reason = message.body as? String, !reason.isEmpty {
+                delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowFailed.with(message: reason))
             } else {
                 delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowFailed.with(message: "Unexpected authentication failure"))
             }
@@ -219,7 +229,7 @@ extension FlowBridge {
 }
 
 private enum FlowBridgeMessage: String, CaseIterable {
-    case log, ready, bridge, failure, success
+    case log, ready, bridge, abort, failure, success
 }
 
 private extension FlowBridgeRequest {
@@ -305,6 +315,13 @@ window.console.info = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage
 window.console.warn = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'warn', message: s }) }
 window.console.error = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'error', message: s }) }
 window.onerror = (message, source, line, column, error) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'fail', message: `${message}, ${source || '-'}, ${error || '-'}` }) }
+
+// Functions for controlling flow execution
+window.descopeBridge = {
+    abortFlow: (reason) => {
+        window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage(reason || '')
+    }
+}
 
 // Called directly below 
 function \(namespace)_initialize() {
