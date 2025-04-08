@@ -89,11 +89,12 @@ extension FlowBridge: WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         switch FlowBridgeMessage(rawValue: message.name) {
         case .log:
-            #if DEBUG
-            if let json = message.body as? [String: Any], let tag = json["tag"] as? String, let message = json["message"] as? String {
-                logger(.debug, "Webview console", "\(tag): \(message)")
+            guard let json = message.body as? [String: Any], let tag = json["tag"] as? String, let message = json["message"] as? String else { return }
+            if tag == "fail" {
+                logger(.error, "Bridge received script error from webpage", message)
+            } else if logger?.unsafe == true {
+                logger(.debug, "Bridge console.\(tag): \(message)")
             }
-            #endif
         case .ready:
             logger(.info, "Bridge received ready event", message.body)
             delegate?.bridgeDidBecomeReady(self)

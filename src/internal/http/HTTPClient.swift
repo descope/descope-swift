@@ -58,32 +58,46 @@ class HTTPClient {
     
     private func call(_ route: String, method: String, headers: [String: String], params: [String: String?], body: Data?) async throws -> (Data, HTTPURLResponse) {
         let request = try makeRequest(route: route, method: method, headers: headers, params: params, body: body)
-        logger(.info, "Starting network call", request.url)
-        #if DEBUG
-        if let body = request.httpBody, let requestBody = String(bytes: body, encoding: .utf8) {
-            logger(.debug, "Sending request body", requestBody)
+        if logger?.unsafe == true {
+            logger(.info, "Starting network call", request.url)
+            if let body = request.httpBody, let requestBody = String(bytes: body, encoding: .utf8) {
+                logger(.debug, "Sending request body", requestBody)
+            }
+        } else {
+            logger(.info, "Starting network call to \(route)")
         }
-        #endif
-        
+
         let (data, response) = try await sendRequest(request)
         
         guard let response = response as? HTTPURLResponse else { throw DescopeError(httpError: .invalidResponse) }
-        #if DEBUG
-        if let responseBody = String(bytes: data, encoding: .utf8) {
+        if logger?.unsafe == true, let responseBody = String(bytes: data, encoding: .utf8) {
             logger(.debug, "Received response body", responseBody)
         }
-        #endif
-        
+
         if let error = DescopeError(httpStatusCode: response.statusCode) {
             if let responseError = errorForResponseData(data) {
-                logger(.info, "Network call failed with server error", request.url, responseError)
+                if logger?.unsafe == true {
+                    logger(.error, "Network call failed with server error", request.url, responseError)
+                } else if let code = (responseError as? DescopeError)?.code {
+                    logger(.error, "Network call to \(route) failed with \(code) server error")
+                } else {
+                    logger(.error, "Network call to \(route) failed with server error")
+                }
                 throw responseError
             }
-            logger(.info, "Network call failed with http error", request.url, error)
+            if logger?.unsafe == true {
+                logger(.error, "Network call failed with \(response.statusCode) http error", request.url, error)
+            } else {
+                logger(.error, "Network call to \(route) failed with \(response.statusCode) http error")
+            }
             throw error
         }
         
-        logger(.info, "Network call finished", request.url)
+        if logger?.unsafe == true {
+            logger(.info, "Network call finished", request.url)
+        } else {
+            logger(.info, "Network call to \(route) finished")
+        }
         return (data, response)
     }
     
@@ -114,7 +128,11 @@ class HTTPClient {
         do {
             return try await networkClient.call(request: request)
         } catch {
-            logger(.error, "Network call failed with network error", request.url, error)
+            if logger?.unsafe == true {
+                logger(.error, "Network call failed with network error", request.url, error)
+            } else {
+                logger(.error, "Network call to \(request.url?.path ?? "") failed with network error")
+            }
             throw DescopeError.networkError.with(cause: error)
         }
     }

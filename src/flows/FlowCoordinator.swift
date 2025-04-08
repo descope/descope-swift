@@ -110,9 +110,10 @@ public class DescopeFlowCoordinator {
     /// The ``delegate`` property should be set before calling this function to ensure
     /// no delegate updates are missed.
     public func start(flow: DescopeFlow) {
-        #if DEBUG && !canImport(React)
-        precondition(webView != nil, "The flow coordinator's webView property must be set before starting the flow")
-        precondition(sdk.config.projectId != "", "The Descope singleton must be setup or an instance of DescopeSDK must be set on the flow")
+        #if !canImport(React)
+        if sdk.config.projectId.isEmpty {
+            logger(.error, "The Descope singleton must be setup or an instance of DescopeSDK must be set on the flow")
+        }
         #endif
 
         logger(.info, "Starting flow authentication", flow)

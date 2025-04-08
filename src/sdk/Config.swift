@@ -12,16 +12,33 @@ public struct DescopeConfig {
     /// An optional object to handle logging in the Descope SDK.
     ///
     /// The default value of this property is `nil` and thus logging will be completely
-    /// disabled. During development if you encounter any issues you can create an
-    /// instance of the ``DescopeLogger`` class to enable logging.
+    /// disabled. During development if you encounter any issues you can use either
+    /// ``DescopeLogger/debugLogger`` or ``DescopeLogger/unsafeLogger`` to enable
+    /// logging and diagnose the problem.
     ///
-    ///     Descope.setup(projectId: "...") { config in
-    ///         config.logger = DescopeLogger()
-    ///     }
+    /// ```swift
+    /// Descope.setup(projectId: "...") { config in
+    ///     config.logger = .debugLogger
+    /// }
+    /// ```
+    ///
+    /// This will configure a simple logger that prints all logs to the console, but
+    /// does not output any potentially unsafe runtime values.
+    ///
+    /// During development you might want to use ``DescopeLogger/unsafeLogger`` instead.
+    /// This will configure a logger that prints all log data, including potentially unsafe
+    /// runtime values such as secrets, personal information, network payloads, etc.
+    ///
+    /// ```swift
+    /// Descope.setup(projectId: "...") { config in
+    ///     // causes a compilation warning to appear to prevent accidental use
+    ///     config.logger = .unsafeLogger
+    /// }
+    /// ```
     ///
     /// If your application uses some logging framework or third party service you can forward
-    /// the Descope SDK log messages to it by creating a new subclass of ``DescopeLogger`` and
-    /// overriding the `output` method.
+    /// the Descope SDK log messages to it by subclassing ``DescopeLogger`` and overriding
+    /// the `output` method. See the documentation for ``DescopeLogger`` for more details.
     public var logger: DescopeLogger?
 
     /// An optional object to override how HTTP requests are performed.
@@ -35,63 +52,19 @@ public struct DescopeConfig {
     public var networkClient: DescopeNetworkClient?
 }
 
-/// The ``DescopeLogger`` class can be used to customize logging functionality in the Descope SDK.
-///
-/// The default behavior is for log messages to be written to the standard output using
-/// the `print()` function.
-///
-/// You can also customize how logging functions in the Descope SDK by creating a subclass
-/// of ``DescopeLogger`` and overriding the ``output(level:message:debug:)`` method. See the
-/// documentation for that method for more details.
-///
-/// - Important: Runtime values such as request bodies or responses are only included
-///     in log messages when the SDK is compiled in debug mode. Even with a custom subclass
-///     of ``DescopeLogger``, when the SDK is compiled for release the log messages will only
-///     contain constant strings.
-open class DescopeLogger {
-    /// The severity of a log message.
-    public enum Level: Int {
-        case error, info, debug
-    }
-    
-    /// The maximum log level that should be printed.
-    public let level: Level
-    
-    /// Creates a new ``DescopeLogger`` object.
-    public init(level: Level = .debug) {
-        self.level = level
-    }
+/// Built-in console loggers for use during development.
+extension DescopeLogger {
+    /// A simple logger that prints all logs to the console, but does not output any
+    /// potentially unsafe runtime values.
+    public static let debugLogger: DescopeLogger = ConsoleLogger.debug
 
-    /// Formats the log message and prints it.
+    /// A simple logger that prints all logs to the console, including potentially unsafe
+    /// runtime values such as secrets, personal information, network payloads, etc.
     ///
-    /// Override this method to customize how to handle log messages from the Descope SDK.
-    ///
-    /// - Parameters:
-    ///   - level: The log level of the message.
-    ///   - message: This parameter is guaranteed to be a constant compile-time string, so
-    ///     you can assume it doesn't contain private user data or secrets and that it can
-    ///     be sent to whatever logging target or service you use.
-    ///   - debug: This array has runtime values that might be useful when debugging
-    ///     issues with the Descope SDK. Since it might contain sensitive information
-    ///     its contents are only provided in `debug` builds. In `release` builds it
-    ///     is always an empty array.
-    open func output(level: Level, message: StaticString, debug: [Any]) {
-        var text = "[\(DescopeSDK.name)] \(message)"
-        if !debug.isEmpty {
-            text += " (" + debug.map { String(describing: $0) }.joined(separator: ", ") + ")"
-        }
-        print(text)
-    }
-    
-    /// Called by other code in the Descope SDK to output log messages.
-    public func log(_ level: Level, _ message: StaticString, _ values: Any?...) {
-        guard level.rawValue <= self.level.rawValue else { return }
-        #if DEBUG
-        output(level: level, message: message, debug: values.compactMap { $0 })
-        #else
-        output(level: level, message: message, debug: [])
-        #endif
-    }
+    /// - Note: This logger is not actually deprecated, but it's marked as such so that the
+    ///     Swift compiler shows a warning at build time if this logger is used unintentionally.
+    @available(*, deprecated, message: "Do not use unsafeLogger in release builds intended for production")
+    public static let unsafeLogger: DescopeLogger = ConsoleLogger.unsafe
 }
 
 /// The ``DescopeNetworkClient`` protocol can be used to override how HTTP requests

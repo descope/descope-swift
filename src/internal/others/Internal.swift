@@ -19,8 +19,24 @@ extension DescopeError {
     }
 }
 
+extension DescopeLogger {
+    class ConsoleLogger: DescopeLogger {
+        static let debug = ConsoleLogger(level: .debug, unsafe: false)
+
+        static let unsafe = ConsoleLogger(level: .debug, unsafe: true)
+
+        override func output(level: Level, message: String, unsafe values: [Any]) {
+            var text = "[\(DescopeSDK.name)] \(message)"
+            if !values.isEmpty {
+                text += " (" + values.map { String(describing: $0) }.joined(separator: ", ") + ")"
+            }
+            print(text)
+        }
+    }
+}
+
 extension DescopeLogger? {
-    func callAsFunction(_ level: DescopeLogger.Level, _ message: StaticString, _ values: Any?...) {
+    func callAsFunction(_ level: DescopeLogger.Level, _ message: String, _ values: Any?...) {
         self?.log(level, message, values)
     }
 }
