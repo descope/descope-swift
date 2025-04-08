@@ -8,8 +8,12 @@ class TestAuth: XCTestCase {
         MockHTTP.push(body: userPayload) { request in
             XCTAssertEqual(request.httpMethod, "GET")
             XCTAssertEqual(request.allHTTPHeaderFields?["Authorization"], "Bearer projId:jwt")
+            XCTAssertEqual(request.allHTTPHeaderFields?["x-descope-platform-name"], "macos")
+            XCTAssertTrue(request.allHTTPHeaderFields?["x-descope-platform-version"]?.contains(".") == true)
+            XCTAssertEqual(request.allHTTPHeaderFields?["x-descope-app-name"], "xctest")
+            XCTAssertTrue(request.allHTTPHeaderFields?["x-descope-app-version"]?.contains(".") == true)
+            XCTAssertTrue(request.allHTTPHeaderFields?["x-descope-device"]?.contains("Mac") == true)
         }
-
         let user = try await descope.auth.me(refreshJwt: "jwt")
 
         try checkUser(user)

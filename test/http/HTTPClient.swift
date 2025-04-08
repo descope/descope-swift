@@ -9,7 +9,6 @@ class TestHttpMethods: XCTestCase {
         MockHTTP.push(json: MockResponse.json, headers: MockResponse.headers) { request in
             XCTAssertEqual(request.httpMethod, "GET")
             XCTAssertEqual(request.url?.absoluteString, "http://example/route?param=spaced%20value")
-            XCTAssertEqual(request.allHTTPHeaderFields?["User-Agent"], makeUserAgent())
             XCTAssertNil(request.httpBody)
             XCTAssertNil(request.httpBodyStream)
         }
@@ -53,12 +52,6 @@ class TestHttpMethods: XCTestCase {
         
         let resp: MockResponse = try await client.post("route", params: params, body: body)
         XCTAssertEqual(resp, MockResponse.instance)
-    }
-
-    func testUserAgent() throws {
-        let userAgent = makeUserAgent()
-        XCTAssertTrue(userAgent.hasPrefix("DescopeKit"))
-        XCTAssertTrue(userAgent.contains("xctest"))
     }
 
     func testbaseURLForProjectId() {
