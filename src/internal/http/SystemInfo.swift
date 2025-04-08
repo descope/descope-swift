@@ -10,9 +10,9 @@ enum SystemInfo {
 
 private func makeOSName() -> String {
     #if os(iOS)
-    return "iOS"
+    return "ios"
     #else
-    return "macOS"
+    return "macos"
     #endif
 }
 
