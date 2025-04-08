@@ -35,12 +35,6 @@ private struct MigrateResponse {
 }
 
 private extension DescopeClient.JWTResponse {
-    func convert() throws -> MigrateResponse {
-        guard let sessionJwt, !sessionJwt.isEmpty else { throw DescopeError.decodeError.with(message: "Missing session JWT") }
-        guard let refreshJwt, !refreshJwt.isEmpty else { throw DescopeError.decodeError.with(message: "Missing refresh JWT") }
-        return try MigrateResponse(sessionToken: Token(jwt: sessionJwt), refreshToken: Token(jwt: refreshJwt))
-    }
-
     func convert() throws -> RefreshResponse {
         guard let sessionJwt, !sessionJwt.isEmpty else { throw DescopeError.decodeError.with(message: "Missing session JWT") }
         var refreshToken: DescopeToken?
@@ -48,5 +42,11 @@ private extension DescopeClient.JWTResponse {
             refreshToken = try Token(jwt: refreshJwt)
         }
         return try RefreshResponse(sessionToken: Token(jwt: sessionJwt), refreshToken: refreshToken)
+    }
+
+    func convert() throws -> MigrateResponse {
+        guard let sessionJwt, !sessionJwt.isEmpty else { throw DescopeError.decodeError.with(message: "Missing session JWT") }
+        guard let refreshJwt, !refreshJwt.isEmpty else { throw DescopeError.decodeError.with(message: "Missing refresh JWT") }
+        return try MigrateResponse(sessionToken: Token(jwt: sessionJwt), refreshToken: Token(jwt: refreshJwt))
     }
 }
