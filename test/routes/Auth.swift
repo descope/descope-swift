@@ -70,6 +70,31 @@ class TestAuth: XCTestCase {
         XCTAssertNil(refreshResponse.refreshToken)
     }
 
+    func testMigrate() async throws {
+        let descope = DescopeSDK.mock()
+
+        MockHTTP.push(body: authPayload) { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.absoluteString ?? "", "https://api.descope.com/v1/auth/refresh")
+            XCTAssertEqual(request.allHTTPHeaderFields?["Authorization"], "Bearer projId")
+            let body = (try! JSONSerialization.jsonObject(with: request.httpBody ?? Data())) as! [String: Any]
+            XCTAssertEqual(body.count, 1)
+            XCTAssertEqual(body["externalToken"] as? String, "foo")
+        }
+
+        MockHTTP.push(body: userPayload) { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.allHTTPHeaderFields?["Authorization"]?.hasPrefix("Bearer projId:ey"), true)
+        }
+
+        let authResponse = try await descope.auth.migrateSession(externalToken: "foo")
+        XCTAssertEqual("bar", authResponse.sessionToken.entityId)
+        XCTAssertEqual("qux", authResponse.refreshToken.entityId)
+        XCTAssertFalse(authResponse.isFirstAuthentication)
+
+        try checkUser(authResponse.user)
+    }
+
     func checkUser(_ user: DescopeUser) throws {
         XCTAssertEqual("userId", user.userId)
         XCTAssertFalse(user.isVerifiedPhone)

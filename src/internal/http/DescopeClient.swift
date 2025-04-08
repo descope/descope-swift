@@ -402,6 +402,12 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         return try await post("auth/refresh", headers: authorization(with: refreshJwt))
     }
     
+    func migrate(externalToken: String) async throws -> JWTResponse {
+        return try await post("auth/refresh", body: [
+            "externalToken": externalToken,
+        ])
+    }
+    
     func logout(type: RevokeType, refreshJwt: String) async throws {
         switch type {
         case .currentSession:
