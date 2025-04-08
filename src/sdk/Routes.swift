@@ -65,7 +65,7 @@ public protocol DescopeAuth: Sendable {
     ///
     /// - Parameter externalToken: the external token to migrate.
     ///
-    /// - Returns: A new ``AuthenticationResponse`` if the exchange was successful.
+    /// - Returns: A new ``AuthenticationResponse`` if the migration was successful.
     func migrateSession(externalToken: String) async throws -> AuthenticationResponse
 
     /// Revokes active sessions for the user.

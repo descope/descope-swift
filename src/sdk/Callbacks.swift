@@ -114,7 +114,7 @@ public extension DescopeAuth {
     /// 
     /// - Parameter externalToken: the external token to migrate.
     /// 
-    /// - Returns: A new ``AuthenticationResponse`` if the exchange was successful.
+    /// - Returns: A new ``AuthenticationResponse`` if the migration was successful.
     func migrateSession(externalToken: String, completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
         Task {
             do {
