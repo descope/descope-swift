@@ -402,6 +402,12 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         return try await post("auth/refresh", headers: authorization(with: refreshJwt))
     }
     
+    func migrate(externalToken: String) async throws -> JWTResponse {
+        return try await post("auth/refresh", body: [
+            "externalToken": externalToken,
+        ])
+    }
+    
     func logout(type: RevokeType, refreshJwt: String) async throws {
         switch type {
         case .currentSession:
@@ -533,11 +539,23 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
     }
     
     override var defaultHeaders: [String: String] {
-        return [
+        var headers = [
             "Authorization": "Bearer \(config.projectId)",
             "x-descope-sdk-name": "swift",
             "x-descope-sdk-version": DescopeSDK.version,
+            "x-descope-platform-name": SystemInfo.osName,
+            "x-descope-platform-version": SystemInfo.osVersion,
         ]
+        if let appName = SystemInfo.appName {
+            headers["x-descope-app-name"] = appName
+        }
+        if let appVersion = SystemInfo.appVersion {
+            headers["x-descope-app-version"] = appVersion
+        }
+        if let device = SystemInfo.device {
+            headers["x-descope-device"] = device
+        }
+        return headers
     }
     
     override func errorForResponseData(_ data: Data) -> Error? {

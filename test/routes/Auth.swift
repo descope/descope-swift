@@ -8,8 +8,12 @@ class TestAuth: XCTestCase {
         MockHTTP.push(body: userPayload) { request in
             XCTAssertEqual(request.httpMethod, "GET")
             XCTAssertEqual(request.allHTTPHeaderFields?["Authorization"], "Bearer projId:jwt")
+            XCTAssertEqual(request.allHTTPHeaderFields?["x-descope-platform-name"], "macos")
+            XCTAssertTrue(request.allHTTPHeaderFields?["x-descope-platform-version"]?.contains(".") == true)
+            XCTAssertEqual(request.allHTTPHeaderFields?["x-descope-app-name"], "xctest")
+            XCTAssertTrue(request.allHTTPHeaderFields?["x-descope-app-version"]?.contains(".") == true)
+            XCTAssertTrue(request.allHTTPHeaderFields?["x-descope-device"]?.contains("Mac") == true)
         }
-
         let user = try await descope.auth.me(refreshJwt: "jwt")
 
         try checkUser(user)
@@ -64,6 +68,31 @@ class TestAuth: XCTestCase {
         let refreshResponse = try await descope.auth.refreshSession(refreshJwt: "foo")
         XCTAssertEqual("bar", refreshResponse.sessionToken.entityId)
         XCTAssertNil(refreshResponse.refreshToken)
+    }
+
+    func testMigrate() async throws {
+        let descope = DescopeSDK.mock()
+
+        MockHTTP.push(body: authPayload) { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.absoluteString ?? "", "https://api.descope.com/v1/auth/refresh")
+            XCTAssertEqual(request.allHTTPHeaderFields?["Authorization"], "Bearer projId")
+            let body = (try! JSONSerialization.jsonObject(with: request.httpBody ?? Data())) as! [String: Any]
+            XCTAssertEqual(body.count, 1)
+            XCTAssertEqual(body["externalToken"] as? String, "foo")
+        }
+
+        MockHTTP.push(body: userPayload) { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.allHTTPHeaderFields?["Authorization"]?.hasPrefix("Bearer projId:ey"), true)
+        }
+
+        let authResponse = try await descope.auth.migrateSession(externalToken: "foo")
+        XCTAssertEqual("bar", authResponse.sessionToken.entityId)
+        XCTAssertEqual("qux", authResponse.refreshToken.entityId)
+        XCTAssertFalse(authResponse.isFirstAuthentication)
+
+        try checkUser(authResponse.user)
     }
 
     func checkUser(_ user: DescopeUser) throws {
