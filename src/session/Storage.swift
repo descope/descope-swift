@@ -37,7 +37,7 @@ public class SessionStorage: DescopeSessionStorage {
     
     private var lastSaved: EncodedSession?
 
-    public init(projectId: String, store: Store = .keychain) {
+    public init(projectId: String, store: Store) {
         self.projectId = projectId
         self.store = store
     }
