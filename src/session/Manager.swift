@@ -4,8 +4,8 @@ import Foundation
 /// A set of delegate methods for events about the session managed by a ``DescopeSessionManager``.
 @MainActor
 public protocol DescopeSessionManagerDelegate: AnyObject {
-    /// Called after the session tokens are updated due to a successful refresh or
-    /// by a call to ``DescopeSessionManager/updateTokens(with:)``.
+    /// Called after the session tokens are updated due to a successful refresh or by
+    /// a call to ``DescopeSessionManager/updateTokens(with:)``.
     func sessionManagerDidUpdateTokens(_ sessionManager: DescopeSessionManager, session: DescopeSession)
 
     /// Called after the session user is updated by a call to ``DescopeSessionManager/updateUser(with:)``.
@@ -87,9 +87,6 @@ public class DescopeSessionManager {
     /// The object that handles session lifecycle for this manager.
     private let lifecycle: DescopeSessionLifecycle
 
-    /// The delegate can be used to get notified when session changes.
-    public weak var delegate: DescopeSessionManagerDelegate?
-
     /// The ``DescopeSession`` managed by this object.
     public var session: DescopeSession? {
         return lifecycle.session
@@ -165,6 +162,23 @@ public class DescopeSessionManager {
         }
     }
 
+    /// Adds a delegate object to the session manager.
+    ///
+    /// - Important: The session manager keeps `weak` references to its delegate objects,
+    ///     so make make sure any object you add as a delegate is retained elsewhere.
+    public func addDelegate(_ delegate: DescopeSessionManagerDelegate) {
+        delegates.add(delegate)
+    }
+
+    /// Removes a delegate object that was previously added.
+    ///
+    /// The session manager keeps `weak` references to its delegate objects, so there's
+    /// usually no need to call this method for objects that are about to be deallocated
+    /// anyway.
+    public func removeDelegate(_ delegate: DescopeSessionManagerDelegate) {
+        delegates.remove(delegate)
+    }
+
     /// Updates the active session's underlying JWTs.
     ///
     /// This function accepts a ``RefreshResponse`` value as a parameter which is returned
@@ -203,15 +217,17 @@ public class DescopeSessionManager {
 
     // Internal
 
+    private var delegates = WeakCollection<DescopeSessionManagerDelegate>()
+
     private func didUpdateTokens() {
         guard let session else { return }
         storage.saveSession(session)
-        delegate?.sessionManagerDidUpdateTokens(self, session: session)
+        delegates.forEach { $0.sessionManagerDidUpdateTokens(self, session: session) }
     }
 
     private func didUpdateUser() {
         guard let session else { return }
         storage.saveSession(session)
-        delegate?.sessionManagerDidUpdateTokens(self, session: session)
+        delegates.forEach { $0.sessionManagerDidUpdateUser(self, session: session) }
     }
 }
