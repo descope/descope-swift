@@ -18,6 +18,7 @@ on the [Descope website](https://descope.com).
 ### User Sessions
 
 - ``DescopeSessionManager``
+- ``DescopeSessionManagerDelegate``
 - ``DescopeSession``
 - ``DescopeUser``
 
