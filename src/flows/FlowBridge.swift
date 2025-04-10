@@ -53,6 +53,9 @@ class FlowBridge: NSObject {
         let setup = WKUserScript(source: setupScript, injectionTime: .atDocumentStart, forMainFrameOnly: false)
         configuration.userContentController.addUserScript(setup)
 
+        let connect = WKUserScript(source: connectScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
+        configuration.userContentController.addUserScript(connect)
+
         if #available(iOS 17.0, macOS 14.0, *) {
             configuration.preferences.inactiveSchedulingPolicy = .none
         }
@@ -305,32 +308,44 @@ private extension FlowBridgeResponse {
 /// A namespace used to prevent collisions with symbols in the JavaScript page
 private let namespace = "_Descope_Bridge"
 
-/// Connects the bridge to the web view and prepares the Descope web-component
+/// Prepares the webview to be used with the bridge
 private let setupScript = """
 
-// Redirect console to bridge
+// Catch script errors in the page
+window.onerror = (message, source, line, column, error) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'fail', message: `${message}, ${source || '-'}, ${error || '-'}` }) }
+
+// Redirect console logs to bridge
 window.console.log = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'log', message: s }) }
 window.console.debug = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'debug', message: s }) }
 window.console.info = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'info', message: s }) }
 window.console.warn = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'warn', message: s }) }
 window.console.error = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'error', message: s }) }
-window.onerror = (message, source, line, column, error) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'fail', message: `${message}, ${source || '-'}, ${error || '-'}` }) }
 
-// Functions for controlling flow execution
-window.descopeBridge = {
-    abortFlow: (reason) => {
-        window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage(reason || '')
-    }
-}
+// Add an accessory object for calling the bridge directly
+window.descopeBridge = {}
+window.descopeBridge.abortFlow = (reason) => { window.webkit.messageHandlers.\(FlowBridgeMessage.abort.rawValue).postMessage(reason || '') }
+
+"""
+
+/// Connects the bridge to the Descope web-component
+private let connectScript = """
 
 // Called directly below 
-function \(namespace)_initialize() {
+function \(namespace)_connect() {
+    // first check if the web-component is immediately available
+    let component = \(namespace)_find()
+    if (component) {
+        \(namespace)_init(component)
+        return
+    }
+
+    // periodically check if the web-component has been added to the page
     let interval
     interval = setInterval(() => {
         let component = \(namespace)_find()
         if (component) {
             clearInterval(interval)
-            \(namespace)_prepare(component)
+            \(namespace)_init(component)
         }
     }, 20)
 }
@@ -341,7 +356,7 @@ function \(namespace)_find() {
 }
 
 // Attaches event listeners once the Descope web-component is found
-function \(namespace)_prepare(component) {
+function \(namespace)_init(component) {
     component.nativeOptions = {
         platform: 'ios',
         bridgeVersion: 1,
@@ -370,6 +385,9 @@ function \(namespace)_prepare(component) {
     component.addEventListener('success', (event) => {
         window.webkit.messageHandlers.\(FlowBridgeMessage.success.rawValue).postMessage(JSON.stringify(event.detail))
     })
+
+    // ensure we support old web-components without this function
+    component.lazyInit?.()
 }
 
 // Called when the Descope web-component is ready to notify the bridge
@@ -398,7 +416,7 @@ function \(namespace)_send(type, payload) {
     }
 }
 
-// Performs required initializations on the page and waits for the web-component to be available
-\(namespace)_initialize()
+// Performs required initializations on the web component and waits for it to be available
+\(namespace)_connect()
 
 """
