@@ -160,6 +160,7 @@ open class DescopeFlowViewController: UIViewController {
     /// method to preserve the same behavior even if they use a different interaction for
     /// letting users cancel the flow.`
     public func cancel() {
+        flowView.delegate = nil
         delegate?.flowViewControllerDidCancel(self)
     }
 
