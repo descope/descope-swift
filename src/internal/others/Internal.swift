@@ -20,7 +20,7 @@ extension DescopeError {
 }
 
 extension DescopeLogger {
-    class ConsoleLogger: DescopeLogger {
+    class ConsoleLogger: DescopeLogger, @unchecked Sendable {
         static let debug = ConsoleLogger(level: .debug, unsafe: false)
 
         static let unsafe = ConsoleLogger(level: .debug, unsafe: true)

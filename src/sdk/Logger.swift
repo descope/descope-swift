@@ -22,8 +22,8 @@
 /// }
 /// ```
 ///
-/// - Important: Do not enable the `unsafe` flag when in release builds intended
-///     for production use.
+/// The logging functions might be called concurrently on multiple threads, so you
+/// should make sure your subclass implementation is thread safe.
 open class DescopeLogger: @unchecked Sendable {
     /// The severity of a log message.
     public enum Level: Int, Sendable {

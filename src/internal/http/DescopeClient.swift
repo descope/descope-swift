@@ -558,7 +558,7 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         return headers
     }
     
-    override func errorForResponseData(_ data: Data) -> Error? {
+    override func errorForResponseData(_ data: Data) -> DescopeError? {
         return DescopeError(errorResponse: data)
     }
     

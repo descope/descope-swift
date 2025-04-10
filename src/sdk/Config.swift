@@ -61,8 +61,8 @@ extension DescopeLogger {
     /// A simple logger that prints all logs to the console, including potentially unsafe
     /// runtime values such as secrets, personal information, network payloads, etc.
     ///
-    /// - Note: This logger is not actually deprecated, but it's marked as such so that the
-    ///     Swift compiler shows a warning at build time if this logger is used unintentionally.
+    /// - Note: This logger is not actually deprecated, but it's marked as such to show
+    ///     a warning at build time in case this logger is used unintentionally.
     @available(*, deprecated, message: "Do not use unsafeLogger in release builds intended for production")
     public static let unsafeLogger: DescopeLogger = ConsoleLogger.unsafe
 }

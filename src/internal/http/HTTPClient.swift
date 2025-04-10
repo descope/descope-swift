@@ -50,7 +50,7 @@ class HTTPClient {
         return 15
     }
     
-    func errorForResponseData(_ data: Data) -> Error? {
+    func errorForResponseData(_ data: Data) -> DescopeError? {
         return nil
     }
     
@@ -78,10 +78,8 @@ class HTTPClient {
             if let responseError = errorForResponseData(data) {
                 if logger?.unsafe == true {
                     logger(.error, "Network call failed with server error", request.url, responseError)
-                } else if let code = (responseError as? DescopeError)?.code {
-                    logger(.error, "Network call to \(route) failed with \(code) server error")
                 } else {
-                    logger(.error, "Network call to \(route) failed with server error")
+                    logger(.error, "Network call to \(route) failed with \(responseError.code) server error")
                 }
                 throw responseError
             }
