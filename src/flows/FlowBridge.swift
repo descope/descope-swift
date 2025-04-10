@@ -323,7 +323,7 @@ window.console.error = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessag
 
 // Add an accessory object for calling the bridge directly
 window.descopeBridge = {}
-window.descopeBridge.abortFlow = (reason) => { window.webkit.messageHandlers.\(FlowBridgeMessage.abort.rawValue).postMessage(reason || '') }
+window.descopeBridge.abortFlow = (reason) => { window.webkit.messageHandlers.\(FlowBridgeMessage.abort.rawValue).postMessage(typeof reason == 'string' ? reason : '') }
 
 """
 
@@ -333,7 +333,7 @@ private let connectScript = """
 // Called directly below 
 function \(namespace)_connect() {
     // first check if the web-component is immediately available
-    let component = \(namespace)_find()
+    const component = \(namespace)_find()
     if (component) {
         \(namespace)_init(component)
         return
@@ -342,7 +342,7 @@ function \(namespace)_connect() {
     // periodically check if the web-component has been added to the page
     let interval
     interval = setInterval(() => {
-        let component = \(namespace)_find()
+        const component = \(namespace)_find()
         if (component) {
             clearInterval(interval)
             \(namespace)_init(component)
