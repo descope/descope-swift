@@ -19,7 +19,10 @@ public protocol DescopeFlowCoordinatorDelegate: AnyObject {
     func coordinatorDidBecomeReady(_ coordinator: DescopeFlowCoordinator)
 
     ///
-    func coordinatorWillShowScreen(_ coordinator: DescopeFlowCoordinator, screen: String, context: [String: Any]) async -> Bool
+    func coordinatorShouldOverrideScreen(_ coordinator: DescopeFlowCoordinator, screen: String) -> Bool
+
+    ///
+    func coordinatorWillShowScreen(_ coordinator: DescopeFlowCoordinator, screen: String, context: [String: Any])
 
     ///
     func coordinatorDidShowScreen(_ coordinator: DescopeFlowCoordinator, screen: String)
@@ -275,11 +278,10 @@ public class DescopeFlowCoordinator {
         case let .webAuth(variant, startURL, finishURL):
             handleWebAuth(variant: variant, startURL: startURL, finishURL: finishURL)
         case let .beforeScreen(screen, context):
-            Task {
-                let show = await delegate?.coordinatorWillShowScreen(self, screen: screen, context: context) ?? true
-                logger(.debug, show ? "Will show screen" : "Will show custom screen", screen)
-                bridge.send(response: .beforeScreen(override: !show))
-            }
+            let override = delegate?.coordinatorShouldOverrideScreen(self, screen: screen) ?? false
+            logger(.debug, override ? "Will show custom screen" : "Will show screen", screen)
+            delegate?.coordinatorWillShowScreen(self, screen: screen, context: context)
+            bridge.send(response: .beforeScreen(override: override))
         case let .afterScreen(screen):
             logger(.debug, "Did show screen", screen)
             delegate?.coordinatorDidShowScreen(self, screen: screen)

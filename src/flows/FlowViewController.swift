@@ -149,7 +149,7 @@ open class DescopeFlowViewController: UIViewController {
     /// You can call this method while the view is hidden to prepare the flow ahead of time,
     /// watching for updates via the delegate, and showing the view when it's ready.
     public func start(flow: DescopeFlow) {
-        flowView.delegate = self
+        flowView.delegate = proxy
         flowView.start(flow: flow)
     }
 
@@ -164,16 +164,51 @@ open class DescopeFlowViewController: UIViewController {
         delegate?.flowViewControllerDidCancel(self)
     }
 
-    // Custom Screens
+    // Custom screens
 
-    open func willShowScreen(_ screen: String, context: [String: Any]) async -> Bool {
-        return true
+    open func flowShouldOverrideScreen(_ screen: String) -> Bool {
+        return false
     }
 
-    open func didShowScreen(_ screen: String) {
+    open func flowWillShowScreen(_ screen: String, context: [String: Any]) {
+    }
+
+    open func flowDidShowScreen(_ screen: String) {
+    }
+
+    public func submitCustomScreen(interactionId: String, form: [String: Any]) {
+        flowView.resumeScreen(interactionId: interactionId, form: form)
+    }
+
+    // Override points
+
+    open func flowDidUpdateState(to state: DescopeFlowState, from previous: DescopeFlowState) {
+        if state == .started {
+            activityView.startAnimating()
+        } else {
+            activityView.stopAnimating()
+        }
+    }
+
+    open func flowDidBecomeReady() {
+    }
+
+    open func flowDidInterceptNavigation(url: URL, external: Bool) {
+        let open = delegate?.flowViewControllerShouldShowURL(self, url: url, external: external) ?? true
+        if open {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    open func flowDidFail(error: DescopeError) {
+    }
+
+    open func flowDidFinish(response: AuthenticationResponse) {
     }
 
     // Internal
+
+    private lazy var proxy = FlowViewDelegateProxy(controller: self)
 
     private lazy var underlyingView = createFlowView()
 
@@ -186,45 +221,61 @@ open class DescopeFlowViewController: UIViewController {
     }
 }
 
-extension DescopeFlowViewController: DescopeFlowViewDelegate {
-    public func flowViewDidUpdateState(_ flowView: DescopeFlowView, to state: DescopeFlowState, from previous: DescopeFlowState) {
-        if state == .started {
-            activityView.startAnimating()
-        } else {
-            activityView.stopAnimating()
-        }
-        delegate?.flowViewControllerDidUpdateState(self, to: state, from: previous)
-    }
-    
-    public func flowViewDidBecomeReady(_ flowView: DescopeFlowView) {
-        delegate?.flowViewControllerDidBecomeReady(self)
+/// A helper class to not expose internal protocol conformances.
+private class FlowViewDelegateProxy: DescopeFlowViewDelegate, DescopeFlowViewDirector {
+    private weak var controller: DescopeFlowViewController?
+
+    init(controller: DescopeFlowViewController) {
+        self.controller = controller
     }
 
-    public func flowViewDidInterceptNavigation(_ flowView: DescopeFlowView, url: URL, external: Bool) {
-        let open = delegate?.flowViewControllerShouldShowURL(self, url: url, external: external) ?? true
-        if open {
-            UIApplication.shared.open(url)
-        }
+    func flowViewDidUpdateState(_ flowView: DescopeFlowView, to state: DescopeFlowState, from previous: DescopeFlowState) {
+        guard let controller else { return }
+        controller.flowDidUpdateState(to: state, from: previous)
+        controller.delegate?.flowViewControllerDidUpdateState(controller, to: state, from: previous)
     }
 
-    public func flowViewWillShowScreen(_ flowView: DescopeFlowView, screen: String, context: [String: Any]) async -> Bool {
-        return await willShowScreen(screen, context: context)
+    func flowViewDidBecomeReady(_ flowView: DescopeFlowView) {
+        guard let controller else { return }
+        controller.flowDidBecomeReady()
+        controller.delegate?.flowViewControllerDidBecomeReady(controller)
     }
 
-    public func flowViewDidShowScreen(_ flowView: DescopeFlowView, screen: String) {
-        didShowScreen(screen)
+    func flowViewShouldOverrideScreen(_ flowView: DescopeFlowView, screen: String) -> Bool {
+        guard let controller else { return false }
+        return controller.flowShouldOverrideScreen(screen)
     }
 
-    public func flowViewDidFail(_ flowView: DescopeFlowView, error: DescopeError) {
+    func flowViewWillShowScreen(_ flowView: DescopeFlowView, screen: String, context: [String: Any]) {
+        guard let controller else { return }
+        controller.flowWillShowScreen(screen, context: context)
+    }
+
+    func flowViewDidShowScreen(_ flowView: DescopeFlowView, screen: String) {
+        guard let controller else { return }
+        controller.flowDidShowScreen(screen)
+    }
+
+    func flowViewDidInterceptNavigation(_ flowView: DescopeFlowView, url: URL, external: Bool) {
+        guard let controller else { return }
+        controller.flowDidInterceptNavigation(url: url, external: external)
+    }
+
+    func flowViewDidFail(_ flowView: DescopeFlowView, error: DescopeError) {
+        guard let controller else { return }
         if error == .flowCancelled {
-            delegate?.flowViewControllerDidCancel(self)
+            controller.flowDidFail(error: error)
+            controller.delegate?.flowViewControllerDidCancel(controller)
         } else {
-            delegate?.flowViewControllerDidFail(self, error: error)
+            controller.flowDidFail(error: error)
+            controller.delegate?.flowViewControllerDidFail(controller, error: error)
         }
     }
-    
-    public func flowViewDidFinish(_ flowView: DescopeFlowView, response: AuthenticationResponse) {
-        delegate?.flowViewControllerDidFinish(self, response: response)
+
+    func flowViewDidFinish(_ flowView: DescopeFlowView, response: AuthenticationResponse) {
+        guard let controller else { return }
+        controller.flowDidFinish(response: response)
+        controller.delegate?.flowViewControllerDidFinish(controller, response: response)
     }
 }
 

@@ -20,12 +20,6 @@ public protocol DescopeFlowViewDelegate: AnyObject {
     /// and do a quick animatad transition to show the flow once this method is called.
     func flowViewDidBecomeReady(_ flowView: DescopeFlowView)
 
-    ///
-    func flowViewWillShowScreen(_ flowView: DescopeFlowView, screen: String, context: [String: Any]) async -> Bool
-
-    ///
-    func flowViewDidShowScreen(_ flowView: DescopeFlowView, screen: String)
-
     /// Called when the user taps on a web link in the flow.
     ///
     /// The `external` parameter is `true` if the link would open in a new browser tab
@@ -47,6 +41,19 @@ public protocol DescopeFlowViewDelegate: AnyObject {
     /// The `response` parameter can be used to create a ``DescopeSession`` as with other
     /// authentication methods.
     func flowViewDidFinish(_ flowView: DescopeFlowView, response: AuthenticationResponse)
+}
+
+/// A set of delegate methods for events about the flow running in a ``DescopeFlowView``.
+@MainActor
+public protocol DescopeFlowViewDirector: AnyObject {
+    ///
+    func flowViewShouldOverrideScreen(_ flowView: DescopeFlowView, screen: String) -> Bool
+
+    ///
+    func flowViewWillShowScreen(_ flowView: DescopeFlowView, screen: String, context: [String: Any])
+
+    ///
+    func flowViewDidShowScreen(_ flowView: DescopeFlowView, screen: String)
 }
 
 /// A view for showing authentication screens built using [Descope Flows](https://app.descope.com/flows).
@@ -113,6 +120,8 @@ open class DescopeFlowView: UIView {
 
     /// A delegate object for receiving events about the state of the flow.
     public weak var delegate: DescopeFlowViewDelegate?
+
+    public weak var director: DescopeFlowViewDirector?
 
     /// Returns the flow that's currently running in the ``DescopeFlowView``.
     public var flow: DescopeFlow? {
@@ -233,13 +242,6 @@ open class DescopeFlowView: UIView {
     open func didBecomeReady() {
     }
 
-    open func willShowScreen(_ screen: String, context: [String: Any]) async -> Bool {
-        return true
-    }
-
-    open func didShowScreen(_ screen: String) {
-    }
-
     /// Override this method if your subclass needs to do something when the user taps
     /// on a web link in the flow.
     ///
@@ -282,16 +284,19 @@ private class FlowCoordinatorDelegateProxy: DescopeFlowCoordinatorDelegate {
         view.delegate?.flowViewDidBecomeReady(view)
     }
 
-    func coordinatorWillShowScreen(_ coordinator: DescopeFlowCoordinator, screen: String, context: [String: Any]) async -> Bool {
-        guard let view else { return true }
-        guard await view.willShowScreen(screen, context: context) else { return false }
-        return await view.delegate?.flowViewWillShowScreen(view, screen: screen, context: context) ?? true
+    func coordinatorShouldOverrideScreen(_ coordinator: DescopeFlowCoordinator, screen: String) -> Bool {
+        guard let view else { return false }
+        return view.director?.flowViewShouldOverrideScreen(view, screen: screen) ?? false
+    }
+
+    func coordinatorWillShowScreen(_ coordinator: DescopeFlowCoordinator, screen: String, context: [String: Any]) {
+        guard let view else { return }
+        view.director?.flowViewWillShowScreen(view, screen: screen, context: context)
     }
 
     func coordinatorDidShowScreen(_ coordinator: DescopeFlowCoordinator, screen: String) {
         guard let view else { return }
-        view.didShowScreen(screen)
-        view.delegate?.flowViewDidShowScreen(view, screen: screen)
+        view.director?.flowViewDidShowScreen(view, screen: screen)
     }
 
     func coordinatorDidInterceptNavigation(_ coordinator: DescopeFlowCoordinator, url: URL, external: Bool) {
