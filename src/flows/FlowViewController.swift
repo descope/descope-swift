@@ -198,6 +198,9 @@ open class DescopeFlowViewController: UIViewController {
         }
     }
 
+    open func flowDidCancel() {
+    }
+
     open func flowDidFail(error: DescopeError) {
     }
 
@@ -257,7 +260,7 @@ private class FlowViewDelegateProxy: DescopeFlowViewDelegate, DescopeFlowViewDir
     func flowViewDidFail(_ flowView: DescopeFlowView, error: DescopeError) {
         guard let controller else { return }
         if error == .flowCancelled {
-            controller.flowDidFail(error: error)
+            controller.flowDidCancel()
             controller.delegate?.flowViewControllerDidCancel(controller)
         } else {
             controller.flowDidFail(error: error)
