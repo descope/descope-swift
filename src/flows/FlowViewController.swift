@@ -150,6 +150,7 @@ open class DescopeFlowViewController: UIViewController {
     /// watching for updates via the delegate, and showing the view when it's ready.
     public func start(flow: DescopeFlow) {
         flowView.delegate = proxy
+        flowView.director = proxy
         flowView.start(flow: flow)
     }
 
@@ -166,17 +167,14 @@ open class DescopeFlowViewController: UIViewController {
 
     // Custom screens
 
-    open func flowShouldOverrideScreen(_ screen: String) -> Bool {
-        return false
-    }
-
-    open func flowWillShowScreen(_ screen: String, context: [String: Any]) {
+    open func flowWillShowScreen(_ screen: String, context: [String: Any]) -> Bool {
+        return true
     }
 
     open func flowDidShowScreen(_ screen: String) {
     }
 
-    public func submitCustomScreen(interactionId: String, form: [String: Any]) {
+    public func resumeScreen(interactionId: String, form: [String: Any]) {
         flowView.resumeScreen(interactionId: interactionId, form: form)
     }
 
@@ -241,14 +239,9 @@ private class FlowViewDelegateProxy: DescopeFlowViewDelegate, DescopeFlowViewDir
         controller.delegate?.flowViewControllerDidBecomeReady(controller)
     }
 
-    func flowViewShouldOverrideScreen(_ flowView: DescopeFlowView, screen: String) -> Bool {
-        guard let controller else { return false }
-        return controller.flowShouldOverrideScreen(screen)
-    }
-
-    func flowViewWillShowScreen(_ flowView: DescopeFlowView, screen: String, context: [String: Any]) {
-        guard let controller else { return }
-        controller.flowWillShowScreen(screen, context: context)
+    func flowViewWillShowScreen(_ flowView: DescopeFlowView, screen: String, context: [String: Any]) -> Bool {
+        guard let controller else { return true }
+        return controller.flowWillShowScreen(screen, context: context)
     }
 
     func flowViewDidShowScreen(_ flowView: DescopeFlowView, screen: String) {

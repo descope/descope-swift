@@ -47,10 +47,7 @@ public protocol DescopeFlowViewDelegate: AnyObject {
 @MainActor
 public protocol DescopeFlowViewDirector: AnyObject {
     ///
-    func flowViewShouldOverrideScreen(_ flowView: DescopeFlowView, screen: String) -> Bool
-
-    ///
-    func flowViewWillShowScreen(_ flowView: DescopeFlowView, screen: String, context: [String: Any])
+    func flowViewWillShowScreen(_ flowView: DescopeFlowView, screen: String, context: [String: Any]) -> Bool
 
     ///
     func flowViewDidShowScreen(_ flowView: DescopeFlowView, screen: String)
@@ -284,14 +281,9 @@ private class FlowCoordinatorDelegateProxy: DescopeFlowCoordinatorDelegate {
         view.delegate?.flowViewDidBecomeReady(view)
     }
 
-    func coordinatorShouldOverrideScreen(_ coordinator: DescopeFlowCoordinator, screen: String) -> Bool {
-        guard let view else { return false }
-        return view.director?.flowViewShouldOverrideScreen(view, screen: screen) ?? false
-    }
-
-    func coordinatorWillShowScreen(_ coordinator: DescopeFlowCoordinator, screen: String, context: [String: Any]) {
-        guard let view else { return }
-        view.director?.flowViewWillShowScreen(view, screen: screen, context: context)
+    func coordinatorWillShowScreen(_ coordinator: DescopeFlowCoordinator, screen: String, context: [String: Any]) -> Bool {
+        guard let view, let director = view.director else { return true }
+        return director.flowViewWillShowScreen(view, screen: screen, context: context)
     }
 
     func coordinatorDidShowScreen(_ coordinator: DescopeFlowCoordinator, screen: String) {
