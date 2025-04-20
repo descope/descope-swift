@@ -89,32 +89,33 @@ extension FlowBridge: WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         switch FlowBridgeMessage(rawValue: message.name) {
         case .log:
-            #if DEBUG
-            if let json = message.body as? [String: Any], let tag = json["tag"] as? String, let message = json["message"] as? String {
-                logger(.debug, "Webview console", "\(tag): \(message)")
+            guard let json = message.body as? [String: Any], let tag = json["tag"] as? String, let message = json["message"] as? String else { return }
+            if tag == "fail" {
+                logger.error("Bridge received script error from webpage", message)
+            } else if logger.isUnsafeEnabled {
+                logger.debug("Webview console.\(tag): \(message)")
             }
-            #endif
         case .ready:
-            logger(.info, "Bridge received ready event", message.body)
+            logger.info("Bridge received ready event", message.body)
             delegate?.bridgeDidBecomeReady(self)
         case .bridge:
-            logger(.info, "Bridge received native event")
+            logger.info("Bridge received native event")
             guard let json = message.body as? [String: Any], let request = FlowBridgeRequest(json: json) else {
-                logger(.error, "Invalid JSON data in flow native event", message.body)
+                logger.error("Invalid JSON data in flow native event", message.body)
                 delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowFailed.with(message: "Invalid JSON data in flow native event"))
                 return
             }
             delegate?.bridgeDidReceiveRequest(self, request: request)
         case .abort:
             if let reason = message.body as? String, !reason.isEmpty {
-                logger(.error, "Bridge received abort event with failure reason")
+                logger.error("Bridge received abort event with failure reason")
                 delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowFailed.with(message: reason))
             } else {
-                logger(.info, "Bridge received abort event for cancellation")
+                logger.info("Bridge received abort event for cancellation")
                 delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowCancelled)
             }
         case .failure:
-            logger(.error, "Bridge received failure event", message.body)
+            logger.error("Bridge received failure event", message.body)
             if let dict = message.body as? [String: Any], let error = DescopeError(errorResponse: dict) {
                 delegate?.bridgeDidFailAuthentication(self, error: error)
             } else if let reason = message.body as? String, !reason.isEmpty {
@@ -123,15 +124,15 @@ extension FlowBridge: WKScriptMessageHandler {
                 delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowFailed.with(message: "Unexpected authentication failure"))
             }
         case .success:
-            logger(.info, "Bridge received success event")
+            logger.info("Bridge received success event")
             guard let json = message.body as? String, case let data = Data(json.utf8) else {
-                logger(.error, "Invalid JSON data in flow success event", message.body)
+                logger.error("Invalid JSON data in flow success event", message.body)
                 delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowFailed.with(message: "Invalid JSON data in flow success event"))
                 return
             }
             delegate?.bridgeDidFinishAuthentication(self, data: data)
         case nil:
-            logger(.error, "Bridge received unexpected message", message.name)
+            logger.error("Bridge received unexpected message", message.name)
         }
     }
 }
@@ -140,33 +141,33 @@ extension FlowBridge: WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
         switch navigationAction.navigationType {
         case .linkActivated:
-            logger(.info, "Webview intercepted link", navigationAction.request.url?.absoluteString)
+            logger.info("Webview intercepted link", navigationAction.request.url?.absoluteString)
             if let url = navigationAction.request.url {
                 delegate?.bridgeDidInterceptNavigation(self, url: url, external: false)
             }
             return .cancel
         default:
-            logger(.info, "Webview will load url", navigationAction.navigationType == .other ? nil : "type=\(navigationAction.navigationType.rawValue)", navigationAction.request.url?.absoluteString)
+            logger.info("Webview will load url", navigationAction.navigationType == .other ? nil : "type=\(navigationAction.navigationType.rawValue)", navigationAction.request.url?.absoluteString)
             return .allow
         }
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation) {
-        logger(.info, "Webview started loading webpage")
+        logger.info("Webview started loading webpage")
         delegate?.bridgeDidStartLoading(self)
     }
 
     func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation) {
-        logger(.info, "Webview received server redirect", webView.url)
+        logger.info("Webview received server redirect", webView.url)
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse) async -> WKNavigationResponsePolicy {
         if let response = navigationResponse.response as? HTTPURLResponse, let error = HTTPError(statusCode: response.statusCode) {
-            logger(.error, "Webview failed loading page", error)
+            logger.error("Webview failed loading page", error)
             delegate?.bridgeDidFailLoading(self, error: DescopeError.networkError.with(message: error.description))
             return .cancel
         }
-        logger(.info, "Webview will receive response")
+        logger.info("Webview will receive response")
         return .allow
     }
 
@@ -175,31 +176,31 @@ extension FlowBridge: WKNavigationDelegate {
         // above and causing the delegate function to return `.cancel`. We rely on the coordinator
         // to not notify about errors multiple times.
         if case let error = error as NSError, error.domain == "WebKitErrorDomain", error.code == 102 { // https://chromium.googlesource.com/chromium/src/+/2233628f5f5b32c7b458428f8d5cfbd0a18be82e/ios/web/public/web_kit_constants.h#25
-            logger(.info, "Webview loading was cancelled")
+            logger.info("Webview loading was cancelled")
         } else {
-            logger(.error, "Webview failed loading url", error)
+            logger.error("Webview failed loading url", error)
         }
         delegate?.bridgeDidFailLoading(self, error: DescopeError.networkError.with(cause: error))
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation) {
-        logger(.info, "Webview received response")
+        logger.info("Webview received response")
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation) {
-        logger(.info, "Webview finished loading webpage")
+        logger.info("Webview finished loading webpage")
         delegate?.bridgeDidFinishLoading(self)
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation, withError error: Error) {
-        logger(.error, "Webview failed loading webpage", error)
+        logger.error("Webview failed loading webpage", error)
         delegate?.bridgeDidFailLoading(self, error: DescopeError.networkError.with(cause: error))
     }
 }
 
 extension FlowBridge: WKUIDelegate {
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        logger(.info, "Webview intercepted external link", navigationAction.request.url?.absoluteString)
+        logger.info("Webview intercepted external link", navigationAction.request.url?.absoluteString)
         if let url = navigationAction.request.url {
             delegate?.bridgeDidInterceptNavigation(self, url: url, external: true)
         }
