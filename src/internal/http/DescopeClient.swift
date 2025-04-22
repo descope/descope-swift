@@ -547,13 +547,13 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
             "x-descope-platform-version": SystemInfo.osVersion,
             "x-descope-project-id": config.projectId,
         ]
-        if let appName = SystemInfo.appName {
+        if let appName = SystemInfo.appName, !appName.isEmpty {
             headers["x-descope-app-name"] = appName
         }
-        if let appVersion = SystemInfo.appVersion {
+        if let appVersion = SystemInfo.appVersion, !appVersion.isEmpty {
             headers["x-descope-app-version"] = appVersion
         }
-        if let device = SystemInfo.device {
+        if let device = SystemInfo.device, !device.isEmpty {
             headers["x-descope-device"] = device
         }
         return headers
