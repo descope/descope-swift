@@ -110,12 +110,13 @@ public class DescopeFlowCoordinator {
     /// The ``delegate`` property should be set before calling this function to ensure
     /// no delegate updates are missed.
     public func start(flow: DescopeFlow) {
-        #if DEBUG && !canImport(React)
-        precondition(webView != nil, "The flow coordinator's webView property must be set before starting the flow")
-        precondition(sdk.config.projectId != "", "The Descope singleton must be setup or an instance of DescopeSDK must be set on the flow")
+        #if !canImport(React)
+        if sdk.config.projectId.isEmpty {
+            logger.error("The Descope singleton must be setup or an instance of DescopeSDK must be set on the flow")
+        }
         #endif
 
-        logger(.info, "Starting flow authentication", flow)
+        logger.info("Starting flow authentication", flow)
         self.flow = flow
         handleStarted()
 
@@ -201,7 +202,7 @@ public class DescopeFlowCoordinator {
 
     private func ensureState(_ states: DescopeFlowState...) -> Bool {
         guard states.contains(state) else {
-            logger(.error, "Unexpected flow state", state, states)
+            logger.error("Unexpected flow state", state, states)
             return false
         }
         return true
@@ -216,10 +217,10 @@ public class DescopeFlowCoordinator {
 
     private func resume(_ url: URL) -> Bool {
         guard state == .ready else {
-            logger(.debug, "Ignoring resume URL", state)
+            logger.debug("Ignoring resume URL", state)
             return false
         }
-        logger(.info, "Received URL for resuming flow", url)
+        logger.info("Received URL for resuming flow", url)
         sendResponse(.magicLink(url: url.absoluteString))
         return true
     }
@@ -272,12 +273,18 @@ public class DescopeFlowCoordinator {
         // keep its own state to ensure it only reports a single failure
         guard state != .failed  else { return }
 
+        logger.error("Flow failed with \(error.code) error", error)
+
         state = .failed
         delegate?.coordinatorDidFail(self, error: error)
     }
 
     private func handleSuccess(_ authResponse: AuthenticationResponse) {
         guard ensureState(.ready) else { return }
+
+        let responseBody: String? = logger.isUnsafeEnabled ? try? String(bytes: JSONEncoder().encode(authResponse), encoding: .utf8) : nil
+        logger.info("Flow finished successfully", responseBody)
+
         state = .finished
         delegate?.coordinatorDidFinish(self, response: authResponse)
     }
@@ -285,7 +292,7 @@ public class DescopeFlowCoordinator {
     // Authentication
 
     private func handleAuthentication(_ data: Data) {
-        logger(.info, "Finishing flow authentication")
+        logger.info("Finishing flow authentication")
         Task {
             guard let authResponse = await parseAuthentication(data) else { return }
             handleSuccess(authResponse)
@@ -300,7 +307,7 @@ public class DescopeFlowCoordinator {
             try jwtResponse.setValues(from: data, cookies: cookies)
             return try jwtResponse.convert()
         } catch {
-            logger(.error, "Unexpected error handling authentication response", error)
+            logger.error("Unexpected error handling authentication response", error, String(bytes: data, encoding: .utf8))
             handleError(DescopeError.flowFailed.with(message: "No valid authentication tokens found"))
             return nil
         }
@@ -309,7 +316,7 @@ public class DescopeFlowCoordinator {
     // OAuth Native
 
     private func handleOAuthNative(clientId: String, stateId: String, nonce: String, implicit: Bool) {
-        logger(.info, "Requesting authentication using Sign in with Apple", clientId)
+        logger.info("Requesting authentication using Sign in with Apple", clientId)
         Task {
             await performOAuthNative(stateId: stateId, nonce: nonce, implicit: implicit)
         }
@@ -329,7 +336,7 @@ public class DescopeFlowCoordinator {
     // OAuth / SSO
 
     private func handleWebAuth(variant: String, startURL: URL, finishURL: URL?) {
-        logger(.info, "Requesting web authentication", startURL)
+        logger.info("Requesting web authentication", startURL)
         Task {
             await performWebAuth(variant: variant, startURL: startURL, finishURL: finishURL)
         }

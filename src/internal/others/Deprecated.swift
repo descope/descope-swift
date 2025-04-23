@@ -50,6 +50,13 @@ public extension DescopeConfig {
     }
 }
 
+public extension DescopeLogger {
+    @available(*, deprecated, message: "Use DescopeLogger.basicLogger or DescopeLogger.debugLogger to diagnose issues during development")
+    convenience init(level: Level = .debug) {
+        self.init(level: level, unsafe: false)
+    }
+}
+
 public extension DescopeFlow {
     @available(*, deprecated, renamed: "oauthNativeProvider")
     var oauthProvider: OAuthProvider? {
