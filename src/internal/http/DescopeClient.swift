@@ -545,6 +545,7 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
             "x-descope-sdk-version": DescopeSDK.version,
             "x-descope-platform-name": SystemInfo.osName,
             "x-descope-platform-version": SystemInfo.osVersion,
+            "x-descope-project-id": config.projectId,
         ]
         if let appName = SystemInfo.appName {
             headers["x-descope-app-name"] = appName
