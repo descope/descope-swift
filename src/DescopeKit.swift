@@ -146,7 +146,7 @@ public extension Descope {
     ///
     /// - Returns: `true` when an ongoing authentication handled the URL or `false` to
     ///     let the caller know that the function didn't handle it.
-    @discardableResult @MainActor
+    @MainActor @discardableResult
     static func handleURL(_ url: URL) -> Bool {
         return sdk.handleURL(url)
     }

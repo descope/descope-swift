@@ -10,7 +10,7 @@ protocol FlowBridgeDelegate: AnyObject {
     func bridgeDidInterceptNavigation(_ bridge: FlowBridge, url: URL, external: Bool)
     func bridgeDidReceiveRequest(_ bridge: FlowBridge, request: FlowBridgeRequest)
     func bridgeDidFailAuthentication(_ bridge: FlowBridge, error: DescopeError)
-    func bridgeDidFinishAuthentication(_ bridge: FlowBridge, data: Data)
+    func bridgeDidFinishAuthentication(_ bridge: FlowBridge, data: Data?)
 }
 
 enum FlowBridgeRequest {
@@ -25,10 +25,20 @@ enum FlowBridgeResponse {
     case failure(String)
 }
 
+struct FlowBridgeAttributes: Decodable {
+    var refreshCookieName: String?
+}
+
 @MainActor
 class FlowBridge: NSObject {
+    /// The coordinator sets the flow auomatically.
+    var flow: DescopeFlow?
+
     /// The coordinator sets a logger automatically.
     var logger: DescopeLogger?
+
+    /// Attributes that are set on the web component that are needed by the coordinator.
+    var attributes = FlowBridgeAttributes()
 
     /// The coordinator sets itself as the bridge delegate.
     weak var delegate: FlowBridgeDelegate?
@@ -70,9 +80,13 @@ class FlowBridge: NSObject {
 }
 
 extension FlowBridge {
-    /// Called by the coordinator once the flow is ready to configure native specific options
-    func postOptions(oauthNativeProvider: String?, magicLinkRedirect: String?) {
-        call(function: "handleOptions", params: oauthNativeProvider ?? "", magicLinkRedirect ?? "")
+    /// Called by the bridge after the found event
+    func initialize() {
+        var options = FlowNativeOptions()
+        options.oauthProvider = flow?.oauthNativeProvider?.name ?? ""
+        options.magicLinkRedirect = flow?.magicLinkRedirect ?? ""
+        let refreshJwt = flow?.refreshJwt ?? ""
+        call(function: "initialize", params: options.payload, refreshJwt)
     }
 
     /// Called by the coordinator when it's done handling a bridge request
@@ -98,6 +112,11 @@ extension FlowBridge: WKScriptMessageHandler {
             } else if logger.isUnsafeEnabled {
                 logger.debug("Webview console.\(tag): \(message)")
             }
+        case .found:
+            logger.info("Bridge received found event")
+            guard let json = message.body as? [String: Any] else { return }
+            attributes.refreshCookieName = json["refreshCookieName"] as? String
+            initialize()
         case .ready:
             logger.info("Bridge received ready event", message.body)
             delegate?.bridgeDidBecomeReady(self)
@@ -128,7 +147,7 @@ extension FlowBridge: WKScriptMessageHandler {
             }
         case .success:
             logger.info("Bridge received success event")
-            guard let json = message.body as? String, case let data = Data(json.utf8) else {
+            guard let json = message.body as? String, case let data = Data(json.utf8), !data.isEmpty else {
                 logger.error("Invalid JSON data in flow success event", message.body)
                 delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowFailed.with(message: "Invalid JSON data in flow success event"))
                 return
@@ -236,7 +255,7 @@ extension FlowBridge {
 }
 
 private enum FlowBridgeMessage: String, CaseIterable {
-    case log, ready, bridge, abort, failure, success
+    case log, found, ready, bridge, abort, failure, success
 }
 
 private extension FlowBridgeRequest {
@@ -309,6 +328,20 @@ private extension FlowBridgeResponse {
     }
 }
 
+private struct FlowNativeOptions: Encodable {
+    var platform = "ios"
+    var bridgeVersion = 1
+    var oauthProvider = ""
+    var oauthRedirect = WebAuth.redirectURL
+    var ssoRedirect = WebAuth.redirectURL
+    var magicLinkRedirect = ""
+
+    var payload: String {
+        guard let data = try? JSONEncoder().encode(self), let value = String(bytes: data, encoding: .utf8) else { return "{}" }
+        return value
+    }
+}
+
 /// Redirects errors and console logs to the bridge
 private let loggingScript = """
 
@@ -341,7 +374,7 @@ window.descopeBridge = {
     },
 
     startFlow() {
-        this.internal.connect()
+        this.internal.start()
     },
 
     internal: {
@@ -349,8 +382,8 @@ window.descopeBridge = {
 
         aborted: false,
 
-        connect() {
-            if (this.aborted || this.initialize()) {
+        start() {
+            if (this.aborted || this.connect()) {
                 return
             }
 
@@ -358,33 +391,43 @@ window.descopeBridge = {
 
             let interval
             interval = setInterval(() => {
-                if (this.aborted || this.initialize()) {
+                if (this.aborted || this.connect()) {
                     clearInterval(interval)
                 }
             }, 20)
         },
 
-        initialize() {
-            this.component = this.findComponent()
+        connect() {
+            this.component ||= document.querySelector('descope-wc')
             if (!this.component) {
                 return false
             }
 
-            this.component.nativeOptions = {
-                platform: 'ios',
-                bridgeVersion: 1,
-                oauthRedirect: '\(WebAuth.redirectURL)',
-                ssoRedirect: '\(WebAuth.redirectURL)',
+            const attributes = {
+                refreshCookieName: this.component.refreshCookieName || undefined,
             }
 
-            // send running web sdk details to native log
+            window.webkit.messageHandlers.\(FlowBridgeMessage.found.rawValue).postMessage(attributes)
+            return true
+        },
+
+        initialize(options, refreshJwt) {
+            // send running webpageg sdk details to native log
             const headers = window.customElements?.get('descope-wc')?.sdkConfigOverrides?.baseHeaders || {}
             console.debug(`Descope ${headers['x-descope-sdk-name'] || 'unknown'} package version "${headers['x-descope-sdk-version'] || 'unknown'}"`)
+
+            this.component.nativeOptions = JSON.parse(options)
+
+            if (refreshJwt) {
+                const storagePrefix = this.component.storagePrefix || ''
+                const storageKey = `${storagePrefix}\(DescopeClient.refreshCookieName)`
+                window.localStorage.setItem(storageKey, refreshJwt)
+            }
             
             if (this.component.flowStatus === 'error') {
                 window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage('The flow failed during initialization')
             } else if (this.component.flowStatus === 'ready' || this.component.shadowRoot?.querySelector('descope-container')) {
-                this.postReady('immediate')
+                this.postReady('immediate') // can only happen in old web-components without lazy init
             } else {
                 this.component.addEventListener('ready', () => {
                     this.postReady('listener')
@@ -409,21 +452,12 @@ window.descopeBridge = {
             return true
         },
 
-        findComponent() {
-            return document.querySelector('descope-wc')
-        },
-
         postReady(tag) {
             if (!this.component.bridgeVersion) {
                 window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage('The flow is using an unsupported web component version')
             } else {
                 window.webkit.messageHandlers.\(FlowBridgeMessage.ready.rawValue).postMessage(tag)
             }
-        },
-
-        handleOptions(oauthNativeProvider, magicLinkRedirect) {
-            this.component.nativeOptions.oauthNativeProvider = oauthNativeProvider
-            this.component.nativeOptions.magicLinkRedirect = magicLinkRedirect
         },
 
         handleResponse(type, payload) {

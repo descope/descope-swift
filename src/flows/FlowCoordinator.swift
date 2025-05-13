@@ -38,7 +38,7 @@ public protocol DescopeFlowCoordinatorDelegate: AnyObject {
     ///
     /// The `response` parameter can be used to create a ``DescopeSession`` as with other
     /// authentication methods.
-    func coordinatorDidFinish(_ coordinator: DescopeFlowCoordinator, response: AuthenticationResponse)
+    func coordinatorDidFinish(_ coordinator: DescopeFlowCoordinator, response: AuthenticationResponse?)
 }
 
 /// A helper class for running Descope Flows.
@@ -63,6 +63,7 @@ public class DescopeFlowCoordinator {
         didSet {
             sdk.resume = resumeClosure
             logger = sdk.config.logger
+            bridge.flow = flow
             bridge.logger = logger
         }
     }
@@ -110,6 +111,8 @@ public class DescopeFlowCoordinator {
     /// The ``delegate`` property should be set before calling this function to ensure
     /// no delegate updates are missed.
     public func start(flow: DescopeFlow) {
+        self.flow = flow
+
         #if !canImport(React)
         if sdk.config.projectId.isEmpty {
             logger.error("The Descope singleton must be setup or an instance of DescopeSDK must be set on the flow")
@@ -117,7 +120,6 @@ public class DescopeFlowCoordinator {
         #endif
 
         logger.info("Starting flow authentication", flow)
-        self.flow = flow
         handleStarted()
 
         loadURL(flow.url)
@@ -249,7 +251,6 @@ public class DescopeFlowCoordinator {
 
     private func handleReady() {
         guard ensureState(.started) else { return }
-        bridge.postOptions(oauthNativeProvider: flow?.oauthNativeProvider?.name, magicLinkRedirect: flow?.magicLinkRedirect)
         state = .ready
         executeHooks(event: .ready)
         delegate?.coordinatorDidBecomeReady(self)
@@ -279,11 +280,13 @@ public class DescopeFlowCoordinator {
         delegate?.coordinatorDidFail(self, error: error)
     }
 
-    private func handleSuccess(_ authResponse: AuthenticationResponse) {
+    private func handleSuccess(_ authResponse: AuthenticationResponse?) {
         guard ensureState(.ready) else { return }
 
-        let responseBody: String? = logger.isUnsafeEnabled ? try? String(bytes: JSONEncoder().encode(authResponse), encoding: .utf8) : nil
-        logger.info("Flow finished successfully", responseBody)
+        logger.info("Flow finished successfully")
+        if logger.isUnsafeEnabled, let authResponse, let data = try? JSONEncoder().encode(authResponse), let value = String(bytes: data, encoding: .utf8) {
+            logger.debug("Received flow response", value)
+        }
 
         state = .finished
         delegate?.coordinatorDidFinish(self, response: authResponse)
@@ -304,7 +307,7 @@ public class DescopeFlowCoordinator {
             guard let webView else { return nil }
             let cookies = await webView.configuration.websiteDataStore.httpCookieStore.cookies(for: webView.url)
             var jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
-            try jwtResponse.setValues(from: data, cookies: cookies)
+            try jwtResponse.setValues(from: data, cookies: cookies, refreshCookieName: bridge.attributes.refreshCookieName)
             return try jwtResponse.convert()
         } catch {
             logger.error("Unexpected error handling authentication response", error, String(bytes: data, encoding: .utf8))
@@ -383,8 +386,12 @@ extension DescopeFlowCoordinator: FlowBridgeDelegate {
         handleError(error)
     }
 
-    func bridgeDidFinishAuthentication(_ bridge: FlowBridge, data: Data) {
-        handleAuthentication(data)
+    func bridgeDidFinishAuthentication(_ bridge: FlowBridge, data: Data?) {
+        if let data {
+            handleAuthentication(data)
+        } else {
+
+        }
     }
 }
 
