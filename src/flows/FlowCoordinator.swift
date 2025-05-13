@@ -389,6 +389,8 @@ extension DescopeFlowCoordinator: FlowBridgeDelegate {
     func bridgeDidFinish(_ bridge: FlowBridge, data: Data?) {
         if let data {
             handleAuthentication(data)
+        } else if let session = flow?.session {
+            handleSuccess(AuthenticationResponse(sessionToken: session.sessionToken, refreshToken: session.refreshToken, user: session.user, isFirstAuthentication: false))
         } else {
             handleError(DescopeError.flowFailed.with(message: "No valid authentication tokens found"))
         }

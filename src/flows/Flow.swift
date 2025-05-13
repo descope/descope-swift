@@ -90,12 +90,12 @@ public class DescopeFlow {
     /// for ``DescopeFlowHook`` for more details.
     public var hooks: [DescopeFlowHook] = []
 
-    /// An optional `refreshJwt` from an active ``DescopeSession``.
+    /// An optional ``DescopeSession`` to start a flow for an authenticated user.
     ///
     /// This can be used when running a flow that expects the user to already be signed in
     /// or that does step-up authentication. For example, a flow to update a user's email
     /// or account recovery details.
-    public var refreshJwt: String?
+    public var session: DescopeSession?
 
     /// The id of the OAuth provider that should leverage the native "Sign in with Apple"
     /// dialog instead of opening a web browser modal.

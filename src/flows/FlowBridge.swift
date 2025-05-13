@@ -82,11 +82,12 @@ class FlowBridge: NSObject {
 extension FlowBridge {
     /// Called by the bridge after the found event
     func initialize() {
-        var options = FlowNativeOptions()
-        options.oauthProvider = flow?.oauthNativeProvider?.name ?? ""
-        options.magicLinkRedirect = flow?.magicLinkRedirect ?? ""
-        let refreshJwt = flow?.refreshJwt ?? ""
-        call(function: "initialize", params: options.payload, refreshJwt)
+        var nativeOptions = FlowNativeOptions()
+        nativeOptions.oauthProvider = flow?.oauthNativeProvider?.name ?? ""
+        nativeOptions.magicLinkRedirect = flow?.magicLinkRedirect ?? ""
+
+        let refreshJwt = flow?.session?.refreshJwt ?? ""
+        call(function: "initialize", params: nativeOptions.payload, flow?.session?.refreshJwt ?? "")
     }
 
     /// Called by the coordinator when it's done handling a bridge request
@@ -404,19 +405,19 @@ window.descopeBridge = {
             }
 
             const attributes = {
-                refreshCookieName: this.component.refreshCookieName || undefined,
+                refreshCookieName: this.component.refreshCookieName || null,
             }
 
             window.webkit.messageHandlers.\(FlowBridgeMessage.found.rawValue).postMessage(attributes)
             return true
         },
 
-        initialize(options, refreshJwt) {
-            // send running webpageg sdk details to native log
+        initialize(nativeOptions, refreshJwt) {
+            // send running webpage sdk details to native log
             const headers = window.customElements?.get('descope-wc')?.sdkConfigOverrides?.baseHeaders || {}
             console.debug(`Descope ${headers['x-descope-sdk-name'] || 'unknown'} package version "${headers['x-descope-sdk-version'] || 'unknown'}"`)
 
-            this.component.nativeOptions = JSON.parse(options)
+            this.component.nativeOptions = JSON.parse(nativeOptions)
 
             if (refreshJwt) {
                 const storagePrefix = this.component.storagePrefix || ''
