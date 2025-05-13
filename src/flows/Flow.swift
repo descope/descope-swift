@@ -41,7 +41,7 @@ public enum DescopeFlowState: String {
 ///
 /// // set the optional oauthProvider property so that OAuth authentications are
 /// // upgraded to use native "Sign in with Apple" instead of a web-based login:
-/// flow.oauthProvider = .apple
+/// flow.oauthNativeProvider = .apple
 ///
 /// // create a DescopeFlowViewController to run the flow
 /// let flowViewController = DescopeFlowViewController()

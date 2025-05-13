@@ -210,7 +210,7 @@ public class DescopeFlowCoordinator {
 
     private func sendResponse(_ response: FlowBridgeResponse) {
         guard ensureState(.ready) else { return }
-        bridge.send(response: response)
+        bridge.postResponse(response)
     }
 
     // Resume
@@ -249,7 +249,7 @@ public class DescopeFlowCoordinator {
 
     private func handleReady() {
         guard ensureState(.started) else { return }
-        bridge.set(oauthProvider: flow?.oauthNativeProvider?.name, magicLinkRedirect: flow?.magicLinkRedirect)
+        bridge.postOptions(oauthNativeProvider: flow?.oauthNativeProvider?.name, magicLinkRedirect: flow?.magicLinkRedirect)
         state = .ready
         executeHooks(event: .ready)
         delegate?.coordinatorDidBecomeReady(self)

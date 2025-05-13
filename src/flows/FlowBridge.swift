@@ -50,11 +50,14 @@ class FlowBridge: NSObject {
     /// Injects the JavaScript code below that's required for the bridge to work, as well as
     /// handlers for messages sent from the webpage to the bridge.
     func prepare(configuration: WKWebViewConfiguration) {
+        let logging = WKUserScript(source: loggingScript, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        configuration.userContentController.addUserScript(logging)
+
         let setup = WKUserScript(source: setupScript, injectionTime: .atDocumentStart, forMainFrameOnly: false)
         configuration.userContentController.addUserScript(setup)
 
-        let connect = WKUserScript(source: connectScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
-        configuration.userContentController.addUserScript(connect)
+        let start = WKUserScript(source: startScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
+        configuration.userContentController.addUserScript(start)
 
         if #available(iOS 17.0, macOS 14.0, *) {
             configuration.preferences.inactiveSchedulingPolicy = .none
@@ -68,19 +71,19 @@ class FlowBridge: NSObject {
 
 extension FlowBridge {
     /// Called by the coordinator once the flow is ready to configure native specific options
-    func set(oauthProvider: String?, magicLinkRedirect: String?) {
-        call(function: "set", params: oauthProvider ?? "", magicLinkRedirect ?? "")
+    func postOptions(oauthNativeProvider: String?, magicLinkRedirect: String?) {
+        call(function: "handleOptions", params: oauthNativeProvider ?? "", magicLinkRedirect ?? "")
     }
 
     /// Called by the coordinator when it's done handling a bridge request
-    func send(response: FlowBridgeResponse) {
-        call(function: "send", params: response.type, response.payload)
+    func postResponse(_ response: FlowBridgeResponse) {
+        call(function: "handleResponse", params: response.type, response.payload)
     }
 
-    /// Helper method to run one of the namespaced functions with escaped string parameters
+    /// Helper method to run one of the internal bridge functions with escaped string parameters
     private func call(function: String, params: String...) {
         let escaped = params.map { $0.javaScriptLiteralString() }.joined(separator: ", ")
-        let javascript = "\(namespace)_\(function)(\(escaped))"
+        let javascript = "window.descopeBridge.internal.\(function)(\(escaped))"
         webView?.evaluateJavaScript(javascript)
     }
 }
@@ -91,7 +94,7 @@ extension FlowBridge: WKScriptMessageHandler {
         case .log:
             guard let json = message.body as? [String: Any], let tag = json["tag"] as? String, let message = json["message"] as? String else { return }
             if tag == "fail" {
-                logger.error("Bridge received script error from webpage", message)
+                logger.error("Bridge encountered script error in webpage", message)
             } else if logger.isUnsafeEnabled {
                 logger.debug("Webview console.\(tag): \(message)")
             }
@@ -306,118 +309,134 @@ private extension FlowBridgeResponse {
     }
 }
 
-/// A namespace used to prevent collisions with symbols in the JavaScript page
-private let namespace = "_Descope_Bridge"
+/// Redirects errors and console logs to the bridge
+private let loggingScript = """
 
-/// Prepares the webview to be used with the bridge
+window.onerror = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'fail', message: s }) }
+window.console.error = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'error', message: s }) }
+window.console.warn = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'warn', message: s }) }
+window.console.info = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'info', message: s }) }
+window.console.debug = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'debug', message: s }) }
+window.console.log = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'log', message: s }) }
+
+"""
+
+/// Sets up the descopeBridge object in the webpage
 private let setupScript = """
 
-// Catch script errors in the page
-window.onerror = (message, source, line, column, error) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'fail', message: `${message}, ${source || '-'}, ${error || '-'}` }) }
+window.descopeBridge = {
+    hostInfo: {
+        sdkName: 'swift',
+        sdkVersion: \(DescopeSDK.version.javaScriptLiteralString()),
+        platformName: \(SystemInfo.osName.javaScriptLiteralString()),
+        platformVersion: \(SystemInfo.osVersion.javaScriptLiteralString()),
+        appName: \(SystemInfo.appName?.javaScriptLiteralString() ?? "''"),
+        appVersion: \(SystemInfo.appVersion?.javaScriptLiteralString() ?? "''"), 
+        device: \(SystemInfo.device?.javaScriptLiteralString() ?? "''"),
+    },
 
-// Redirect console logs to bridge
-window.console.log = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'log', message: s }) }
-window.console.debug = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'debug', message: s }) }
-window.console.info = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'info', message: s }) }
-window.console.warn = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'warn', message: s }) }
-window.console.error = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'error', message: s }) }
+    abortFlow(reason) {
+        this.internal.aborted = true
+        window.webkit.messageHandlers.\(FlowBridgeMessage.abort.rawValue).postMessage(typeof reason == 'string' ? reason : '')
+    },
 
-// Add an accessory object for calling the bridge directly
-window.descopeBridge = {}
-window.descopeBridge.abortFlow = (reason) => { window.webkit.messageHandlers.\(FlowBridgeMessage.abort.rawValue).postMessage(typeof reason == 'string' ? reason : '') }
+    startFlow() {
+        this.internal.connect()
+    },
+
+    internal: {
+        component: null,
+
+        aborted: false,
+
+        connect() {
+            if (this.aborted || this.initialize()) {
+                return
+            }
+
+            console.debug('Waiting for Descope component')
+
+            let interval
+            interval = setInterval(() => {
+                if (this.aborted || this.initialize()) {
+                    clearInterval(interval)
+                }
+            }, 20)
+        },
+
+        initialize() {
+            this.component = this.findComponent()
+            if (!this.component) {
+                return false
+            }
+
+            this.component.nativeOptions = {
+                platform: 'ios',
+                bridgeVersion: 1,
+                oauthRedirect: '\(WebAuth.redirectURL)',
+                ssoRedirect: '\(WebAuth.redirectURL)',
+            }
+
+            // send running web sdk details to native log
+            const headers = window.customElements?.get('descope-wc')?.sdkConfigOverrides?.baseHeaders || {}
+            console.debug(`Descope ${headers['x-descope-sdk-name'] || 'unknown'} package version "${headers['x-descope-sdk-version'] || 'unknown'}"`)
+            
+            if (this.component.flowStatus === 'error') {
+                window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage('The flow failed during initialization')
+            } else if (this.component.flowStatus === 'ready' || this.component.shadowRoot?.querySelector('descope-container')) {
+                this.postReady('immediate')
+            } else {
+                this.component.addEventListener('ready', () => {
+                    this.postReady('listener')
+                })
+            }
+
+            this.component.addEventListener('bridge', (event) => {
+                window.webkit.messageHandlers.\(FlowBridgeMessage.bridge.rawValue).postMessage(event.detail)
+            })
+
+            this.component.addEventListener('error', (event) => {
+                window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage(event.detail)
+            })
+
+            this.component.addEventListener('success', (event) => {
+                window.webkit.messageHandlers.\(FlowBridgeMessage.success.rawValue).postMessage(JSON.stringify(event.detail))
+            })
+
+            // ensure we support old web-components without this function
+            this.component.lazyInit?.()
+
+            return true
+        },
+
+        findComponent() {
+            return document.querySelector('descope-wc')
+        },
+
+        postReady(tag) {
+            if (!this.component.bridgeVersion) {
+                window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage('The flow is using an unsupported web component version')
+            } else {
+                window.webkit.messageHandlers.\(FlowBridgeMessage.ready.rawValue).postMessage(tag)
+            }
+        },
+
+        handleOptions(oauthNativeProvider, magicLinkRedirect) {
+            this.component.nativeOptions.oauthNativeProvider = oauthNativeProvider
+            this.component.nativeOptions.magicLinkRedirect = magicLinkRedirect
+        },
+
+        handleResponse(type, payload) {
+            this.component.nativeResume(type, payload)
+        },
+    }
+}
 
 """
 
 /// Connects the bridge to the Descope web-component
-private let connectScript = """
+private let startScript = """
 
-// Called directly below 
-function \(namespace)_connect() {
-    // first check if the web-component is immediately available
-    const component = \(namespace)_find()
-    if (component) {
-        \(namespace)_init(component)
-        return
-    }
-
-    // periodically check if the web-component has been added to the page
-    let interval
-    interval = setInterval(() => {
-        const component = \(namespace)_find()
-        if (component) {
-            clearInterval(interval)
-            \(namespace)_init(component)
-        }
-    }, 20)
-}
-
-// Finds the Descope web-component in the webpage
-function \(namespace)_find() {
-    return document.querySelector('descope-wc')
-}
-
-// Attaches event listeners once the Descope web-component is found
-function \(namespace)_init(component) {
-    component.nativeOptions = {
-        platform: 'ios',
-        bridgeVersion: 1,
-        oauthRedirect: '\(WebAuth.redirectURL)',
-        ssoRedirect: '\(WebAuth.redirectURL)',
-    }
-
-    if (component.flowStatus === 'error') {
-        window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage('The flow failed during initialization')
-    } else if (component.flowStatus === 'ready' || component.shadowRoot?.querySelector('descope-container')) {
-        \(namespace)_ready(component, 'immediate')
-    } else {
-        component.addEventListener('ready', () => {
-            \(namespace)_ready(component, 'listener')
-        })
-    }
-
-    component.addEventListener('bridge', (event) => {
-        window.webkit.messageHandlers.\(FlowBridgeMessage.bridge.rawValue).postMessage(event.detail)
-    })
-
-    component.addEventListener('error', (event) => {
-        window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage(event.detail)
-    })
-
-    component.addEventListener('success', (event) => {
-        window.webkit.messageHandlers.\(FlowBridgeMessage.success.rawValue).postMessage(JSON.stringify(event.detail))
-    })
-
-    // ensure we support old web-components without this function
-    component.lazyInit?.()
-}
-
-// Called when the Descope web-component is ready to notify the bridge
-function \(namespace)_ready(component, tag) {
-    if (!component.bridgeVersion) {
-        window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage('The flow is using an unsupported web component version')
-    } else {
-        window.webkit.messageHandlers.\(FlowBridgeMessage.ready.rawValue).postMessage(tag)
-    }
-}
-
-// Updates the values of native options
-function \(namespace)_set(oauthProvider, magicLinkRedirect) {
-    let component = \(namespace)_find()
-    if (component) {
-        component.nativeOptions.oauthProvider = oauthProvider
-        component.nativeOptions.magicLinkRedirect = magicLinkRedirect
-    }
-}
-
-// Sends a response from the bridge to resume the flow
-function \(namespace)_send(type, payload) {
-    let component = \(namespace)_find()
-    if (component) {
-        component.nativeResume(type, payload)
-    }
-}
-
-// Performs required initializations on the web component and waits for it to be available
-\(namespace)_connect()
+window.descopeBridge.startFlow()
 
 """

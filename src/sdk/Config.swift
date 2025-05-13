@@ -15,11 +15,11 @@ public struct DescopeConfig {
     /// disabled. You can set this to ``DescopeLogger/basicLogger`` to print error and info
     /// log messages to the console.
     ///
-    /// If you encounter any issues you can also use ``DescopeLogger/debugLogger`` to
-    /// enable more verbose logging. This will configure a simple logger that prints all
-    /// logs to the console. If the logger detects that a debugger is attached (i.e., the
-    /// app is running in Xcode) it will also output potentially sensitive runtime values,
-    /// such as full network request and response payloads, secrets and tokens in clear text, etc.
+    /// If you encounter any issues you can also use ``DescopeLogger/debugLogger`` to enable
+    /// more verbose logging. This will configure a simple logger that prints all logs to the
+    /// console. If the logger detects that a debugger is attached (i.e., the app is running
+    /// in Xcode) it will also output potentially sensitive runtime values, such as full
+    /// network request and response payloads, secrets and tokens in cleartext, etc.
     ///
     /// ```swift
     /// Descope.setup(projectId: "...") { config in
