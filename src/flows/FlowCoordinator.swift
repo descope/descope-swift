@@ -38,7 +38,7 @@ public protocol DescopeFlowCoordinatorDelegate: AnyObject {
     ///
     /// The `response` parameter can be used to create a ``DescopeSession`` as with other
     /// authentication methods.
-    func coordinatorDidFinish(_ coordinator: DescopeFlowCoordinator, response: AuthenticationResponse?)
+    func coordinatorDidFinish(_ coordinator: DescopeFlowCoordinator, response: AuthenticationResponse)
 }
 
 /// A helper class for running Descope Flows.
@@ -280,11 +280,11 @@ public class DescopeFlowCoordinator {
         delegate?.coordinatorDidFail(self, error: error)
     }
 
-    private func handleSuccess(_ authResponse: AuthenticationResponse?) {
+    private func handleSuccess(_ authResponse: AuthenticationResponse) {
         guard ensureState(.ready) else { return }
 
         logger.info("Flow finished successfully")
-        if logger.isUnsafeEnabled, let authResponse, let data = try? JSONEncoder().encode(authResponse), let value = String(bytes: data, encoding: .utf8) {
+        if logger.isUnsafeEnabled, let data = try? JSONEncoder().encode(authResponse), let value = String(bytes: data, encoding: .utf8) {
             logger.debug("Received flow response", value)
         }
 
@@ -310,8 +310,8 @@ public class DescopeFlowCoordinator {
             try jwtResponse.setValues(from: data, cookies: cookies, refreshCookieName: bridge.attributes.refreshCookieName)
             return try jwtResponse.convert()
         } catch {
-            logger.error("Unexpected error handling authentication response", error, String(bytes: data, encoding: .utf8))
-            handleError(DescopeError.flowFailed.with(message: "No valid authentication tokens found"))
+            logger.error("Unexpected error parsing authentication response", error, String(bytes: data, encoding: .utf8))
+            handleError(DescopeError.flowFailed.with(message: "No valid authentication response found"))
             return nil
         }
     }
@@ -386,11 +386,11 @@ extension DescopeFlowCoordinator: FlowBridgeDelegate {
         handleError(error)
     }
 
-    func bridgeDidFinishAuthentication(_ bridge: FlowBridge, data: Data?) {
+    func bridgeDidFinish(_ bridge: FlowBridge, data: Data?) {
         if let data {
             handleAuthentication(data)
         } else {
-
+            handleError(DescopeError.flowFailed.with(message: "No valid authentication tokens found"))
         }
     }
 }

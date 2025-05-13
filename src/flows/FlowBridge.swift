@@ -10,7 +10,7 @@ protocol FlowBridgeDelegate: AnyObject {
     func bridgeDidInterceptNavigation(_ bridge: FlowBridge, url: URL, external: Bool)
     func bridgeDidReceiveRequest(_ bridge: FlowBridge, request: FlowBridgeRequest)
     func bridgeDidFailAuthentication(_ bridge: FlowBridge, error: DescopeError)
-    func bridgeDidFinishAuthentication(_ bridge: FlowBridge, data: Data?)
+    func bridgeDidFinish(_ bridge: FlowBridge, data: Data?)
 }
 
 enum FlowBridgeRequest {
@@ -146,13 +146,13 @@ extension FlowBridge: WKScriptMessageHandler {
                 delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowFailed.with(message: "Unexpected authentication failure"))
             }
         case .success:
-            logger.info("Bridge received success event")
-            guard let json = message.body as? String, case let data = Data(json.utf8), !data.isEmpty else {
-                logger.error("Invalid JSON data in flow success event", message.body)
-                delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowFailed.with(message: "Invalid JSON data in flow success event"))
-                return
+            if let json = message.body as? String, case let data = Data(json.utf8), !data.isEmpty {
+                logger.info("Bridge received success event")
+                delegate?.bridgeDidFinish(self, data: data)
+            } else {
+                logger.info("Bridge received success event without authentication data")
+                delegate?.bridgeDidFinish(self, data: nil)
             }
-            delegate?.bridgeDidFinishAuthentication(self, data: data)
         case nil:
             logger.error("Bridge received unexpected message", message.name)
         }
@@ -443,7 +443,8 @@ window.descopeBridge = {
             })
 
             this.component.addEventListener('success', (event) => {
-                window.webkit.messageHandlers.\(FlowBridgeMessage.success.rawValue).postMessage(JSON.stringify(event.detail))
+                const response = event.detail ? JSON.stringify(event.detail) : ''
+                window.webkit.messageHandlers.\(FlowBridgeMessage.success.rawValue).postMessage(response)
             })
 
             // ensure we support old web-components without this function

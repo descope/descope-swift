@@ -90,13 +90,15 @@ public class DescopeFlow {
     /// for ``DescopeFlowHook`` for more details.
     public var hooks: [DescopeFlowHook] = []
 
-    /// When this user has a valid session, it's possible to provide the flow with a
-    /// refresh JWT to use for authentication. This is useful when you want the user to
-    /// already be logged in when the flow is presented.
+    /// An optional `refreshJwt` from an active ``DescopeSession``.
+    ///
+    /// This can be used when running a flow that expects the user to already be signed in
+    /// or that does step-up authentication. For example, a flow to update a user's email
+    /// or account recovery details.
     public var refreshJwt: String?
 
-    /// The id of the oauth provider that should leverage the native "Sign in with Apple"
-    /// dialog instead of opening a web browser.
+    /// The id of the OAuth provider that should leverage the native "Sign in with Apple"
+    /// dialog instead of opening a web browser modal.
     ///
     /// This will usually either be `.apple` or the name of a custom OAuth provider you've
     /// created in the [Descope Console](https://app.descope.com/settings/authentication/social)
