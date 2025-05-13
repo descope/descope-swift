@@ -204,7 +204,7 @@ public class DescopeFlowCoordinator {
 
     private func ensureState(_ states: DescopeFlowState...) -> Bool {
         guard states.contains(state) else {
-            logger.error("Unexpected flow state", state, states)
+            logger.error("Unexpected flow state: \(state)", states)
             return false
         }
         return true
