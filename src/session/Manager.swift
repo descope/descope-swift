@@ -126,8 +126,17 @@ public class DescopeSessionManager {
     ///     unless they use custom `storage` objects they might overwrite
     ///     each other's saved sessions.
     public func manageSession(_ session: DescopeSession) {
+        let current = lifecycle.session
+
         lifecycle.session = session
         storage.saveSession(session)
+
+        if let current, current.sessionJwt != session.sessionJwt || current.refreshJwt != session.refreshJwt {
+            delegates.forEach { $0.sessionManagerDidUpdateTokens(self, session: session) }
+        }
+        if let current, current.user != session.user {
+            delegates.forEach { $0.sessionManagerDidUpdateUser(self, session: session) }
+        }
     }
 
     /// Clears any active ``DescopeSession`` from this manager and removes it

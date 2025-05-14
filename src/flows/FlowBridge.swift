@@ -57,6 +57,9 @@ class FlowBridge: NSObject {
         }
     }
 
+    /// A proxy object to handle WKWebView messages without causing a retain cycle.
+    private lazy var messageHandler = FlowBridgeMessageHandler(bridge: self)
+
     /// Injects the JavaScript code below that's required for the bridge to work, as well as
     /// handlers for messages sent from the webpage to the bridge.
     func prepare(configuration: WKWebViewConfiguration) {
@@ -74,7 +77,7 @@ class FlowBridge: NSObject {
         }
 
         for name in FlowBridgeMessage.allCases {
-            configuration.userContentController.add(self, name: name.rawValue)
+            configuration.userContentController.add(messageHandler, name: name.rawValue)
         }
     }
 }
@@ -86,8 +89,13 @@ extension FlowBridge {
         nativeOptions.oauthProvider = flow?.oauthNativeProvider?.name ?? ""
         nativeOptions.magicLinkRedirect = flow?.magicLinkRedirect ?? ""
 
-        let refreshJwt = flow?.session?.refreshJwt ?? ""
-        call(function: "initialize", params: nativeOptions.payload, flow?.session?.refreshJwt ?? "")
+        let refreshJwt = flow?.providedSession?.refreshJwt ?? ""
+        call(function: "initialize", params: nativeOptions.payload, refreshJwt)
+    }
+
+    /// Called by the coordinator when it needs to update the refresh token in the page.
+    func updateToken(refreshJwt: String) {
+        call(function: "updateToken", params: refreshJwt)
     }
 
     /// Called by the coordinator when it's done handling a bridge request
@@ -103,8 +111,8 @@ extension FlowBridge {
     }
 }
 
-extension FlowBridge: WKScriptMessageHandler {
-    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+extension FlowBridge {
+    func handleScriptMessage(_ message: WKScriptMessage) {
         switch FlowBridgeMessage(rawValue: message.name) {
         case .log:
             guard let json = message.body as? [String: Any], let tag = json["tag"] as? String, let message = json["message"] as? String else { return }
@@ -329,6 +337,18 @@ private extension FlowBridgeResponse {
     }
 }
 
+private class FlowBridgeMessageHandler: NSObject, WKScriptMessageHandler {
+    weak var bridge: FlowBridge?
+
+    init(bridge: FlowBridge) {
+        self.bridge = bridge
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        bridge?.handleScriptMessage(message)
+    }
+}
+
 private struct FlowNativeOptions: Encodable {
     var platform = "ios"
     var bridgeVersion = 1
@@ -418,12 +438,7 @@ window.descopeBridge = {
             console.debug(`Descope ${headers['x-descope-sdk-name'] || 'unknown'} package version "${headers['x-descope-sdk-version'] || 'unknown'}"`)
 
             this.component.nativeOptions = JSON.parse(nativeOptions)
-
-            if (refreshJwt) {
-                const storagePrefix = this.component.storagePrefix || ''
-                const storageKey = `${storagePrefix}\(DescopeClient.refreshCookieName)`
-                window.localStorage.setItem(storageKey, refreshJwt)
-            }
+            this.updateToken(refreshJwt)
             
             if (this.component.flowStatus === 'error') {
                 window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage('The flow failed during initialization')
@@ -459,6 +474,14 @@ window.descopeBridge = {
                 window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage('The flow is using an unsupported web component version')
             } else {
                 window.webkit.messageHandlers.\(FlowBridgeMessage.ready.rawValue).postMessage(tag)
+            }
+        },
+
+        updateToken(refreshJwt) {
+            if (refreshJwt) {
+                const storagePrefix = this.component.storagePrefix || ''
+                const storageKey = `${storagePrefix}\(DescopeClient.refreshCookieName)`
+                window.localStorage.setItem(storageKey, refreshJwt)
             }
         },
 

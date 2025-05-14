@@ -204,7 +204,7 @@ public class DescopeFlowCoordinator {
 
     private func ensureState(_ states: DescopeFlowState...) -> Bool {
         guard states.contains(state) else {
-            logger.error("Unexpected flow state: \(state)", states)
+            logger.error("Unexpected flow state", state, states)
             return false
         }
         return true
@@ -213,6 +213,38 @@ public class DescopeFlowCoordinator {
     private func sendResponse(_ response: FlowBridgeResponse) {
         guard ensureState(.ready) else { return }
         bridge.postResponse(response)
+    }
+
+    // Session
+
+    private var sessionTimer: Timer?
+
+    private func updateToken() {
+        guard let session = flow?.providedSession else { return }
+        bridge.updateToken(refreshJwt: session.refreshJwt)
+    }
+
+    private func updateSessionTimer() {
+        if state == .ready {
+            startSessionTimer()
+        } else {
+            stopSessionTimer()
+        }
+    }
+
+    private func startSessionTimer() {
+        sessionTimer?.invalidate()
+        sessionTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] timer in
+            guard let coordinator = self else { return timer.invalidate() }
+            Task { @MainActor in
+                coordinator.updateToken()
+            }
+        }
+    }
+
+    private func stopSessionTimer() {
+        sessionTimer?.invalidate()
+        sessionTimer = nil
     }
 
     // Resume
@@ -253,6 +285,7 @@ public class DescopeFlowCoordinator {
         guard ensureState(.started) else { return }
         state = .ready
         executeHooks(event: .ready)
+        updateSessionTimer()
         delegate?.coordinatorDidBecomeReady(self)
     }
 
@@ -277,6 +310,7 @@ public class DescopeFlowCoordinator {
         logger.error("Flow failed with \(error.code) error", error)
 
         state = .failed
+        updateSessionTimer()
         delegate?.coordinatorDidFail(self, error: error)
     }
 
@@ -289,6 +323,7 @@ public class DescopeFlowCoordinator {
         }
 
         state = .finished
+        updateSessionTimer()
         delegate?.coordinatorDidFinish(self, response: authResponse)
     }
 
@@ -389,7 +424,7 @@ extension DescopeFlowCoordinator: FlowBridgeDelegate {
     func bridgeDidFinish(_ bridge: FlowBridge, data: Data?) {
         if let data {
             handleAuthentication(data)
-        } else if let session = flow?.session {
+        } else if let session = flow?.providedSession {
             handleSuccess(AuthenticationResponse(sessionToken: session.sessionToken, refreshToken: session.refreshToken, user: session.user, isFirstAuthentication: false))
         } else {
             handleError(DescopeError.flowFailed.with(message: "No valid authentication tokens found"))

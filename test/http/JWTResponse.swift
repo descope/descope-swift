@@ -29,20 +29,20 @@ class TestJWTResponse: XCTestCase {
 
         // should find a valid refresh jwt for the right project
         var jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
-        try jwtResponse.setValues(from: data, cookies: [validCookie])
+        try jwtResponse.setValues(from: data, cookies: [validCookie], refreshCookieName: nil)
         var authResponse: AuthenticationResponse = try jwtResponse.convert()
         XCTAssertFalse(authResponse.refreshToken.isExpired)
 
         // should succeed but return an expired JWT since that's all we've got
         jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
-        try jwtResponse.setValues(from: data, cookies: [expiredCookie])
+        try jwtResponse.setValues(from: data, cookies: [expiredCookie], refreshCookieName: nil)
         authResponse = try jwtResponse.convert()
         XCTAssertTrue(authResponse.refreshToken.isExpired)
 
         // should succeed and find the non-expired JWT (order shouldn't matter)
         for v in [[expiredCookie, validCookie], [validCookie, expiredCookie]] {
             jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
-            try jwtResponse.setValues(from: data, cookies: v)
+            try jwtResponse.setValues(from: data, cookies: v, refreshCookieName: nil)
             authResponse = try jwtResponse.convert()
             XCTAssertFalse(authResponse.refreshToken.isExpired)
         }
@@ -50,7 +50,7 @@ class TestJWTResponse: XCTestCase {
         // should pick the newest JWT out of all valid ones (order shouldn't matter)
         for v in [[expiredCookie, validCookie, newestCookie], [newestCookie, expiredCookie, validCookie], [validCookie, expiredCookie, newestCookie]] {
             jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
-            try jwtResponse.setValues(from: data, cookies: v)
+            try jwtResponse.setValues(from: data, cookies: v, refreshCookieName: nil)
             authResponse = try jwtResponse.convert()
             XCTAssertFalse(authResponse.refreshToken.isExpired)
             XCTAssertEqual(authResponse.refreshToken.issuedAt, Date(timeIntervalSince1970: 1526239022))
