@@ -431,13 +431,13 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         mutating func setValues(from data: Data, response: HTTPURLResponse) throws {
             guard let url = response.url, let fields = response.allHeaderFields as? [String: String] else { return }
             let cookies = HTTPCookie.cookies(withResponseHeaderFields: fields, for: url)
-            try setValues(from: data, cookies: cookies)
+            try setValues(from: data, cookies: cookies, refreshCookieName: nil)
         }
 
         // The UserResponse decoding takes care of all fields except customAttributes,
         // and we also extract JWTs from the response or webpage cookies if the project
         // is configured to not return them in the response
-        mutating func setValues(from data: Data, cookies: [HTTPCookie]) throws {
+        mutating func setValues(from data: Data, cookies: [HTTPCookie], refreshCookieName: String?) throws {
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
             if let dict = json["user"] as? [String: Any] {
                 user?.setCustomAttributes(from: dict)
@@ -446,7 +446,7 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
                 sessionJwt = findTokenCookie(named: sessionCookieName, in: cookies)
             }
             if refreshJwt == nil || refreshJwt == "" {
-                refreshJwt = findTokenCookie(named: refreshCookieName, in: cookies)
+                refreshJwt = findTokenCookie(named: refreshCookieName ?? DescopeClient.refreshCookieName, in: cookies)
             }
         }
     }

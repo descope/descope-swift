@@ -10,7 +10,7 @@ protocol FlowBridgeDelegate: AnyObject {
     func bridgeDidInterceptNavigation(_ bridge: FlowBridge, url: URL, external: Bool)
     func bridgeDidReceiveRequest(_ bridge: FlowBridge, request: FlowBridgeRequest)
     func bridgeDidFailAuthentication(_ bridge: FlowBridge, error: DescopeError)
-    func bridgeDidFinishAuthentication(_ bridge: FlowBridge, data: Data)
+    func bridgeDidFinish(_ bridge: FlowBridge, data: Data?)
 }
 
 enum FlowBridgeRequest {
@@ -25,10 +25,20 @@ enum FlowBridgeResponse {
     case failure(String)
 }
 
+struct FlowBridgeAttributes: Decodable {
+    var refreshCookieName: String?
+}
+
 @MainActor
 class FlowBridge: NSObject {
+    /// The coordinator sets the flow automatically.
+    var flow: DescopeFlow?
+
     /// The coordinator sets a logger automatically.
     var logger: DescopeLogger?
+
+    /// Attributes that are set on the web component that are needed by the coordinator.
+    var attributes = FlowBridgeAttributes()
 
     /// The coordinator sets itself as the bridge delegate.
     weak var delegate: FlowBridgeDelegate?
@@ -47,6 +57,9 @@ class FlowBridge: NSObject {
         }
     }
 
+    /// A proxy object to handle WKWebView messages without causing a retain cycle.
+    private lazy var messageHandler = FlowBridgeMessageHandler(bridge: self)
+
     /// Injects the JavaScript code below that's required for the bridge to work, as well as
     /// handlers for messages sent from the webpage to the bridge.
     func prepare(configuration: WKWebViewConfiguration) {
@@ -64,15 +77,25 @@ class FlowBridge: NSObject {
         }
 
         for name in FlowBridgeMessage.allCases {
-            configuration.userContentController.add(self, name: name.rawValue)
+            configuration.userContentController.add(messageHandler, name: name.rawValue)
         }
     }
 }
 
 extension FlowBridge {
-    /// Called by the coordinator once the flow is ready to configure native specific options
-    func postOptions(oauthNativeProvider: String?, magicLinkRedirect: String?) {
-        call(function: "handleOptions", params: oauthNativeProvider ?? "", magicLinkRedirect ?? "")
+    /// Called by the bridge after the found event
+    func initialize() {
+        var nativeOptions = FlowNativeOptions()
+        nativeOptions.oauthProvider = flow?.oauthNativeProvider?.name ?? ""
+        nativeOptions.magicLinkRedirect = flow?.magicLinkRedirect ?? ""
+
+        let refreshJwt = flow?.providedSession?.refreshJwt ?? ""
+        call(function: "initialize", params: nativeOptions.payload, refreshJwt)
+    }
+
+    /// Called by the coordinator when it needs to update the refresh token in the page.
+    func updateToken(refreshJwt: String) {
+        call(function: "updateToken", params: refreshJwt)
     }
 
     /// Called by the coordinator when it's done handling a bridge request
@@ -88,8 +111,8 @@ extension FlowBridge {
     }
 }
 
-extension FlowBridge: WKScriptMessageHandler {
-    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+extension FlowBridge {
+    func handleScriptMessage(_ message: WKScriptMessage) {
         switch FlowBridgeMessage(rawValue: message.name) {
         case .log:
             guard let json = message.body as? [String: Any], let tag = json["tag"] as? String, let message = json["message"] as? String else { return }
@@ -98,6 +121,11 @@ extension FlowBridge: WKScriptMessageHandler {
             } else if logger.isUnsafeEnabled {
                 logger.debug("Webview console.\(tag): \(message)")
             }
+        case .found:
+            logger.info("Bridge received found event")
+            guard let json = message.body as? [String: Any] else { return }
+            attributes.refreshCookieName = json["refreshCookieName"] as? String
+            initialize()
         case .ready:
             logger.info("Bridge received ready event", message.body)
             delegate?.bridgeDidBecomeReady(self)
@@ -127,13 +155,13 @@ extension FlowBridge: WKScriptMessageHandler {
                 delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowFailed.with(message: "Unexpected authentication failure"))
             }
         case .success:
-            logger.info("Bridge received success event")
-            guard let json = message.body as? String, case let data = Data(json.utf8) else {
-                logger.error("Invalid JSON data in flow success event", message.body)
-                delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowFailed.with(message: "Invalid JSON data in flow success event"))
-                return
+            if let json = message.body as? String, case let data = Data(json.utf8), !data.isEmpty {
+                logger.info("Bridge received success event")
+                delegate?.bridgeDidFinish(self, data: data)
+            } else {
+                logger.info("Bridge received success event without authentication data")
+                delegate?.bridgeDidFinish(self, data: nil)
             }
-            delegate?.bridgeDidFinishAuthentication(self, data: data)
         case nil:
             logger.error("Bridge received unexpected message", message.name)
         }
@@ -236,7 +264,7 @@ extension FlowBridge {
 }
 
 private enum FlowBridgeMessage: String, CaseIterable {
-    case log, ready, bridge, abort, failure, success
+    case log, found, ready, bridge, abort, failure, success
 }
 
 private extension FlowBridgeRequest {
@@ -309,6 +337,32 @@ private extension FlowBridgeResponse {
     }
 }
 
+private class FlowBridgeMessageHandler: NSObject, WKScriptMessageHandler {
+    weak var bridge: FlowBridge?
+
+    init(bridge: FlowBridge) {
+        self.bridge = bridge
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        bridge?.handleScriptMessage(message)
+    }
+}
+
+private struct FlowNativeOptions: Encodable {
+    var platform = "ios"
+    var bridgeVersion = 1
+    var oauthProvider = ""
+    var oauthRedirect = WebAuth.redirectURL
+    var ssoRedirect = WebAuth.redirectURL
+    var magicLinkRedirect = ""
+
+    var payload: String {
+        guard let data = try? JSONEncoder().encode(self), let value = String(bytes: data, encoding: .utf8) else { return "{}" }
+        return value
+    }
+}
+
 /// Redirects errors and console logs to the bridge
 private let loggingScript = """
 
@@ -341,7 +395,7 @@ window.descopeBridge = {
     },
 
     startFlow() {
-        this.internal.connect()
+        this.internal.start()
     },
 
     internal: {
@@ -349,8 +403,8 @@ window.descopeBridge = {
 
         aborted: false,
 
-        connect() {
-            if (this.aborted || this.initialize()) {
+        start() {
+            if (this.aborted || this.connect()) {
                 return
             }
 
@@ -358,33 +412,38 @@ window.descopeBridge = {
 
             let interval
             interval = setInterval(() => {
-                if (this.aborted || this.initialize()) {
+                if (this.aborted || this.connect()) {
                     clearInterval(interval)
                 }
             }, 20)
         },
 
-        initialize() {
-            this.component = this.findComponent()
+        connect() {
+            this.component ||= document.querySelector('descope-wc')
             if (!this.component) {
                 return false
             }
 
-            this.component.nativeOptions = {
-                platform: 'ios',
-                bridgeVersion: 1,
-                oauthRedirect: '\(WebAuth.redirectURL)',
-                ssoRedirect: '\(WebAuth.redirectURL)',
+            const attributes = {
+                refreshCookieName: this.component.refreshCookieName || null,
             }
 
-            // send running web sdk details to native log
+            window.webkit.messageHandlers.\(FlowBridgeMessage.found.rawValue).postMessage(attributes)
+            return true
+        },
+
+        initialize(nativeOptions, refreshJwt) {
+            // send running webpage sdk details to native log
             const headers = window.customElements?.get('descope-wc')?.sdkConfigOverrides?.baseHeaders || {}
             console.debug(`Descope ${headers['x-descope-sdk-name'] || 'unknown'} package version "${headers['x-descope-sdk-version'] || 'unknown'}"`)
+
+            this.component.nativeOptions = JSON.parse(nativeOptions)
+            this.updateToken(refreshJwt)
             
             if (this.component.flowStatus === 'error') {
                 window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage('The flow failed during initialization')
             } else if (this.component.flowStatus === 'ready' || this.component.shadowRoot?.querySelector('descope-container')) {
-                this.postReady('immediate')
+                this.postReady('immediate') // can only happen in old web-components without lazy init
             } else {
                 this.component.addEventListener('ready', () => {
                     this.postReady('listener')
@@ -400,17 +459,14 @@ window.descopeBridge = {
             })
 
             this.component.addEventListener('success', (event) => {
-                window.webkit.messageHandlers.\(FlowBridgeMessage.success.rawValue).postMessage(JSON.stringify(event.detail))
+                const response = event.detail ? JSON.stringify(event.detail) : ''
+                window.webkit.messageHandlers.\(FlowBridgeMessage.success.rawValue).postMessage(response)
             })
 
             // ensure we support old web-components without this function
             this.component.lazyInit?.()
 
             return true
-        },
-
-        findComponent() {
-            return document.querySelector('descope-wc')
         },
 
         postReady(tag) {
@@ -421,9 +477,12 @@ window.descopeBridge = {
             }
         },
 
-        handleOptions(oauthNativeProvider, magicLinkRedirect) {
-            this.component.nativeOptions.oauthNativeProvider = oauthNativeProvider
-            this.component.nativeOptions.magicLinkRedirect = magicLinkRedirect
+        updateToken(refreshJwt) {
+            if (refreshJwt) {
+                const storagePrefix = this.component.storagePrefix || ''
+                const storageKey = `${storagePrefix}\(DescopeClient.refreshCookieName)`
+                window.localStorage.setItem(storageKey, refreshJwt)
+            }
         },
 
         handleResponse(type, payload) {

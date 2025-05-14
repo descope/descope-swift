@@ -63,6 +63,23 @@ extension DescopeLogger? {
     }
 }
 
+extension DescopeFlow {
+    @MainActor
+    var providedSession: DescopeSession? {
+        // if there's a non-nil provider always use its value, no matter if the value is nil or not
+        if let provider = sessionProvider {
+            return provider()
+        }
+        // only take the session from the manager if it's not expired, in case the app is running
+        // a login flow and it didn't clear the previous session from its manager by mistake
+        let sdk = descope ?? Descope.sdk
+        if let session = sdk.sessionManager.session, !session.refreshToken.isExpired {
+            return session
+        }
+        return nil
+    }
+}
+
 extension Data {
     init?(base64URLEncoded base64URLString: String, options: Base64DecodingOptions = []) {
         var str = base64URLString.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
