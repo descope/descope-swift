@@ -31,7 +31,7 @@ struct FlowBridgeAttributes: Decodable {
 
 @MainActor
 class FlowBridge: NSObject {
-    /// The coordinator sets the flow auomatically.
+    /// The coordinator sets the flow automatically.
     var flow: DescopeFlow?
 
     /// The coordinator sets a logger automatically.
