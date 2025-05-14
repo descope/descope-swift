@@ -219,25 +219,12 @@ public class DescopeFlowCoordinator {
 
     private var sessionTimer: Timer?
 
-    private func updateToken() {
-        guard let session = flow?.providedSession else { return }
-        bridge.updateToken(refreshJwt: session.refreshJwt)
-    }
-
-    private func updateSessionTimer() {
-        if state == .ready {
-            startSessionTimer()
-        } else {
-            stopSessionTimer()
-        }
-    }
-
     private func startSessionTimer() {
         sessionTimer?.invalidate()
         sessionTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] timer in
             guard let coordinator = self else { return timer.invalidate() }
             Task { @MainActor in
-                coordinator.updateToken()
+                coordinator.updateSessionToken()
             }
         }
     }
@@ -245,6 +232,11 @@ public class DescopeFlowCoordinator {
     private func stopSessionTimer() {
         sessionTimer?.invalidate()
         sessionTimer = nil
+    }
+
+    private func updateSessionToken() {
+        guard let session = flow?.providedSession else { return }
+        bridge.updateToken(refreshJwt: session.refreshJwt)
     }
 
     // Resume
@@ -285,7 +277,7 @@ public class DescopeFlowCoordinator {
         guard ensureState(.started) else { return }
         state = .ready
         executeHooks(event: .ready)
-        updateSessionTimer()
+        startSessionTimer()
         delegate?.coordinatorDidBecomeReady(self)
     }
 
@@ -310,7 +302,7 @@ public class DescopeFlowCoordinator {
         logger.error("Flow failed with \(error.code) error", error)
 
         state = .failed
-        updateSessionTimer()
+        stopSessionTimer()
         delegate?.coordinatorDidFail(self, error: error)
     }
 
@@ -323,7 +315,7 @@ public class DescopeFlowCoordinator {
         }
 
         state = .finished
-        updateSessionTimer()
+        stopSessionTimer()
         delegate?.coordinatorDidFinish(self, response: authResponse)
     }
 
