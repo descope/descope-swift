@@ -57,6 +57,8 @@ class FlowBridge: NSObject {
         }
     }
 
+    // Lifecycle
+
     /// A proxy object to handle WKWebView messages without causing a retain cycle.
     private lazy var messageHandler = FlowBridgeMessageHandler(bridge: self)
 
@@ -79,6 +81,62 @@ class FlowBridge: NSObject {
         for name in FlowBridgeMessage.allCases {
             configuration.userContentController.add(messageHandler, name: name.rawValue)
         }
+    }
+    
+    /// Called by the coordinator to start loading the flow in the webview
+    func start() {
+        retries.until = Date().addingTimeInterval(retryWindow)
+        load()
+    }
+    
+    private func load() {
+        let url = URL(string: flow?.url ?? "") ?? URL(string: "invalid://")!
+        var request = URLRequest(url: url)
+        if let timeout = flow?.requestTimeoutInterval {
+            request.timeoutInterval = timeout
+        }
+        webView?.load(request)
+    }
+    
+    // Retry
+    
+    private let retryAttempts = 3
+    private let retryWindow: TimeInterval = 10
+    private let retryBackoff: TimeInterval = 1.5
+    
+    private var retries: (scheduled: Bool, attempts: Int, until: Date) = (false, 0, .distantFuture)
+    
+    private func scheduleRetryAfterError(_ error: DescopeError) {
+        // defend against multiple errors from the same attempt
+        guard !retries.scheduled else { return }
+        
+        guard retries.attempts < retryAttempts else {
+            logger.info("Aborting flow loading after \(retries.attempts) retries")
+            delegate?.bridgeDidFailLoading(self, error: error)
+            return
+        }
+
+        // we only allow a retry if the scheduled time will still fit in the retry window
+        let delay = retryBackoff * TimeInterval(retries.attempts)
+        guard retries.until > Date() + delay else {
+            logger.info("Aborting flow loading after retry timeout")
+            delegate?.bridgeDidFailLoading(self, error: error)
+            return
+        }
+        
+        retries.scheduled = true
+        retries.attempts += 1
+        
+        logger.info("Scheduling flow loading attempt", retries.attempts)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            self?.retryLoad()
+        }
+    }
+    
+    private func retryLoad() {
+        logger.info("Retrying flow loading")
+        retries.scheduled = false
+        load()
     }
 }
 
@@ -195,7 +253,12 @@ extension FlowBridge: WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse) async -> WKNavigationResponsePolicy {
         if let response = navigationResponse.response as? HTTPURLResponse, let error = HTTPError(statusCode: response.statusCode) {
             logger.error("Webview failed loading page", error)
-            delegate?.bridgeDidFailLoading(self, error: DescopeError.networkError.with(message: error.description))
+            let networkError = DescopeError.networkError.with(message: error.description)
+            if response.statusCode >= 500 {
+                scheduleRetryAfterError(networkError)
+            } else {
+                delegate?.bridgeDidFailLoading(self, error: networkError)
+            }
             return .cancel
         }
         logger.info("Webview will receive response")
@@ -207,11 +270,11 @@ extension FlowBridge: WKNavigationDelegate {
         // above and causing the delegate function to return `.cancel`. We rely on the coordinator
         // to not notify about errors multiple times.
         if case let error = error as NSError, error.domain == "WebKitErrorDomain", error.code == 102 { // https://chromium.googlesource.com/chromium/src/+/2233628f5f5b32c7b458428f8d5cfbd0a18be82e/ios/web/public/web_kit_constants.h#25
-            logger.info("Webview loading was cancelled")
+            logger.debug("Webview loading has already been cancelled")
         } else {
             logger.error("Webview failed loading url", error)
         }
-        delegate?.bridgeDidFailLoading(self, error: DescopeError.networkError.with(cause: error))
+        scheduleRetryAfterError(DescopeError.networkError.with(cause: error))
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation) {
@@ -225,7 +288,7 @@ extension FlowBridge: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation, withError error: Error) {
         logger.error("Webview failed loading webpage", error)
-        delegate?.bridgeDidFailLoading(self, error: DescopeError.networkError.with(cause: error))
+        scheduleRetryAfterError(DescopeError.networkError.with(cause: error))
     }
 }
 
