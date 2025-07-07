@@ -122,16 +122,7 @@ public class DescopeFlowCoordinator {
         logger.info("Starting flow authentication", flow)
         handleStarted()
 
-        loadURL(flow.url)
-    }
-
-    private func loadURL(_ url: String) {
-        let url = URL(string: url) ?? URL(string: "invalid://")!
-        var request = URLRequest(url: url)
-        if let timeout = flow?.requestTimeoutInterval {
-            request.timeoutInterval = timeout
-        }
-        webView?.load(request)
+        bridge.start()
     }
 
     private var sdk: DescopeSDK {
