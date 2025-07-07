@@ -202,7 +202,7 @@ public class DescopeFlowCoordinator {
     }
 
     private func sendResponse(_ response: FlowBridgeResponse) {
-        guard ensureState(.ready) else { return }
+        guard ensureState(.started, .ready) else { return } // we get here in started state if the flow has no screens
         bridge.postResponse(response)
     }
 
@@ -268,12 +268,12 @@ public class DescopeFlowCoordinator {
         guard ensureState(.started) else { return }
         state = .ready
         executeHooks(event: .ready)
-        startSessionTimer()
+        startSessionTimer() // XXX session won't be updated if the flow doesn't have any screens
         delegate?.coordinatorDidBecomeReady(self)
     }
 
     private func handleRequest(_ request: FlowBridgeRequest) {
-        guard ensureState(.ready) else { return }
+        guard ensureState(.started, .ready) else { return } // we get here in started state if the flow has no screens
         switch request {
         case let .oauthNative(clientId, stateId, nonce, implicit):
             handleOAuthNative(clientId: clientId, stateId: stateId, nonce: nonce, implicit: implicit)
@@ -298,7 +298,7 @@ public class DescopeFlowCoordinator {
     }
 
     private func handleSuccess(_ authResponse: AuthenticationResponse) {
-        guard ensureState(.ready) else { return }
+        guard ensureState(.started, .ready) else { return } // we get here in started state if the flow has no screens
 
         logger.info("Flow finished successfully")
         if logger.isUnsafeEnabled, let data = try? JSONEncoder().encode(authResponse), let value = String(bytes: data, encoding: .utf8) {
