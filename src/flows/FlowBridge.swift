@@ -100,9 +100,8 @@ class FlowBridge: NSObject {
     
     // Retry
     
-    private let retryAttempts = 3
     private let retryWindow: TimeInterval = 10
-    private let retryBackoff: TimeInterval = 1.5
+    private let retryBackoff: TimeInterval = 1.25
     
     private var retries: (scheduled: Bool, attempts: Int, until: Date) = (false, 0, .distantFuture)
     
@@ -110,13 +109,8 @@ class FlowBridge: NSObject {
         // defend against multiple errors from the same attempt
         guard !retries.scheduled else { return }
         
-        guard retries.attempts < retryAttempts else {
-            logger.info("Aborting flow loading after \(retries.attempts) retries")
-            delegate?.bridgeDidFailLoading(self, error: error)
-            return
-        }
-
         // we only allow a retry if the scheduled time will still fit in the retry window
+        retries.attempts += 1
         let delay = retryBackoff * TimeInterval(retries.attempts)
         guard retries.until > Date() + delay else {
             logger.info("Aborting flow loading after retry timeout")
@@ -124,10 +118,8 @@ class FlowBridge: NSObject {
             return
         }
         
-        retries.scheduled = true
-        retries.attempts += 1
-        
         logger.info("Scheduling flow loading attempt", retries.attempts)
+        retries.scheduled = true
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             self?.retryLoad()
         }
