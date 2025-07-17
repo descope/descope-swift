@@ -136,6 +136,18 @@ extension SessionStorage {
         ///     users will not be found and users will need to sign in again.
         public var label = "DescopeSession"
 
+        public init(
+            accessibility: String = kSecAttrAccessibleAfterFirstUnlock as String,
+            accessGroup: String? = nil,
+            service: String = "com.descope.DescopeKit",
+            label: String = "DescopeSession"
+        ) {
+            self.accessibility = accessibility
+            self.accessGroup = accessGroup
+            self.service = service
+            self.label = label
+        }
+        
         public override func loadItem(key: String) -> Data? {
             var query = queryForItem(key: key)
             query[kSecReturnData as String] = true
