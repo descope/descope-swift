@@ -140,6 +140,10 @@ extension FlowBridge {
         nativeOptions.magicLinkRedirect = flow?.magicLinkRedirect ?? ""
 
         let refreshJwt = flow?.providedSession?.refreshJwt ?? ""
+        if refreshJwt != nil {
+            logger.info("Passing refreshJwt to flow initialization", refreshJwt)
+        }
+        
         call(function: "initialize", params: nativeOptions.payload, refreshJwt)
     }
 

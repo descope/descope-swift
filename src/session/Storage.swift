@@ -27,10 +27,12 @@ public protocol DescopeSessionStorage: AnyObject {
 /// rest with an encryption key that only becomes available to the operating system
 /// after the device is unlocked at least once following a device restart.
 ///
-/// For your convenience, you can subclass the `SessionStorage.Store` class and
-/// override the `loadItem`, `saveItem` and `removeItem` functions, then pass an
-/// instance of that class to the initializer to create a ``SessionStorage`` object
-/// that uses a different backing store.
+/// To change the default storage behavior, create an instance of this class
+/// and pass your own `SessionStorage.KeychainStore` object to the initializer,
+/// after changing whatever properties you need from their default values.
+/// Alternatively, to use a different backing store implementation you can
+/// also subclass the `SessionStorage.Store` class and override the `loadItem`,
+/// `saveItem` and `removeItem` functions, then pass it to the initializer.
 public class SessionStorage: DescopeSessionStorage {
     public let projectId: String
     public let store: Store
@@ -68,6 +70,9 @@ public class SessionStorage: DescopeSessionStorage {
     /// The default function implementations in this class do nothing or return `nil`.
     @MainActor
     open class Store {
+        public init() {
+        }
+        
         open func loadItem(key: String) throws -> Data? {
             return nil
         }
@@ -136,18 +141,6 @@ extension SessionStorage {
         ///     users will not be found and users will need to sign in again.
         public var label = "DescopeSession"
 
-        public init(
-            accessibility: String = kSecAttrAccessibleAfterFirstUnlock as String,
-            accessGroup: String? = nil,
-            service: String = "com.descope.DescopeKit",
-            label: String = "DescopeSession"
-        ) {
-            self.accessibility = accessibility
-            self.accessGroup = accessGroup
-            self.service = service
-            self.label = label
-        }
-        
         public override func loadItem(key: String) -> Data? {
             var query = queryForItem(key: key)
             query[kSecReturnData as String] = true
