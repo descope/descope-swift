@@ -411,6 +411,7 @@ extension DescopeFlowCoordinator: FlowBridgeDelegate {
             handleSuccess(AuthenticationResponse(sessionToken: session.sessionToken, refreshToken: session.refreshToken, user: session.user, isFirstAuthentication: false))
         } else {
             logger.info("Couldn't find session to finish flow", flow, flow?.sessionProvider == nil ? "nil provider" : "custom provider")
+            flow?.logProvidedSession(logger: logger)
             handleError(DescopeError.flowFailed.with(message: "No valid authentication tokens found"))
         }
     }
