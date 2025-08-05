@@ -215,7 +215,7 @@ public class DescopeFlowCoordinator {
         sessionTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] timer in
             guard let coordinator = self else { return timer.invalidate() }
             Task { @MainActor in
-                coordinator.updateSessionToken()
+                coordinator.updateRefreshJwt()
             }
         }
     }
@@ -225,9 +225,9 @@ public class DescopeFlowCoordinator {
         sessionTimer = nil
     }
 
-    private func updateSessionToken() {
+    private func updateRefreshJwt() {
         guard let session = flow?.providedSession else { return }
-        bridge.updateToken(refreshJwt: session.refreshJwt)
+        bridge.updateRefreshJwt(session.refreshJwt)
     }
 
     // Resume

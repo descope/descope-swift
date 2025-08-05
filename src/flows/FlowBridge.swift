@@ -135,21 +135,34 @@ class FlowBridge: NSObject {
 extension FlowBridge {
     /// Called by the bridge after the found event
     func initialize() {
+        guard let flow else { return }
+        
         var nativeOptions = FlowNativeOptions()
-        nativeOptions.oauthProvider = flow?.oauthNativeProvider?.name ?? ""
-        nativeOptions.magicLinkRedirect = flow?.magicLinkRedirect ?? ""
+        nativeOptions.oauthProvider = flow.oauthNativeProvider?.name ?? ""
+        nativeOptions.magicLinkRedirect = flow.magicLinkRedirect ?? ""
 
-        let refreshJwt = flow?.providedSession?.refreshJwt ?? ""
-        if refreshJwt != nil {
-            logger.info("Passing refreshJwt to flow initialization", refreshJwt)
+        var refreshJwt = ""
+        if let session = flow.providedSession {
+            logger.info("Passing refreshJwt to flow initialization", session.refreshJwt)
+            refreshJwt = session.refreshJwt
         }
         
-        call(function: "initialize", params: nativeOptions.payload, refreshJwt)
+        var clientInputs = ""
+        if !flow.clientInputs.isEmpty {
+            if !JSONSerialization.isValidJSONObject(flow.clientInputs) {
+                logger.error("Invalid flow client parameters provided")
+            } else if let data = try? JSONSerialization.data(withJSONObject: flow.clientInputs, options: []), let json = String(bytes: data, encoding: .utf8) {
+                logger.info("Passing clientInputs to flow initialization", json)
+                clientInputs = json
+            }
+        }
+        
+        call(function: "initialize", params: nativeOptions.payload, refreshJwt, clientInputs)
     }
 
     /// Called by the coordinator when it needs to update the refresh token in the page.
-    func updateToken(refreshJwt: String) {
-        call(function: "updateToken", params: refreshJwt)
+    func updateRefreshJwt(_ refreshJwt: String) {
+        call(function: "updateRefreshJwt", params: refreshJwt)
     }
 
     /// Called by the coordinator when it's done handling a bridge request
@@ -491,13 +504,14 @@ window.descopeBridge = {
             return true
         },
 
-        initialize(nativeOptions, refreshJwt) {
+        initialize(nativeOptions, refreshJwt, clientInputs) {
             // send running webpage sdk details to native log
             const headers = window.customElements?.get('descope-wc')?.sdkConfigOverrides?.baseHeaders || {}
             console.debug(`Descope ${headers['x-descope-sdk-name'] || 'unknown'} package version "${headers['x-descope-sdk-version'] || 'unknown'}"`)
 
             this.component.nativeOptions = JSON.parse(nativeOptions)
-            this.updateToken(refreshJwt)
+            this.updateRefreshJwt(refreshJwt)
+            this.updateClientInputs(clientInputs)
             
             if (this.component.flowStatus === 'error') {
                 window.webkit.messageHandlers.\(FlowBridgeMessage.failure.rawValue).postMessage('The flow failed during initialization')
@@ -536,13 +550,25 @@ window.descopeBridge = {
             }
         },
 
-        updateToken(refreshJwt) {
+        updateRefreshJwt(refreshJwt) {
             if (refreshJwt) {
                 const storagePrefix = this.component.storagePrefix || ''
                 const storageKey = `${storagePrefix}\(DescopeClient.refreshCookieName)`
                 window.localStorage.setItem(storageKey, refreshJwt)
             }
         },
+
+        updateClientInputs(inputs) {
+            let client = {}
+            try {
+                client = JSON.parse(wc.getAttribute('client') || '{}')
+            } catch (e) {}
+            client = {
+                ...client,
+                ...JSON.parse(inputs || '{}'),
+            }
+            this.component.setAttribute('client', JSON.stringify(client))
+        }
 
         handleResponse(type, payload) {
             this.component.nativeResume(type, payload)
