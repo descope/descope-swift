@@ -561,7 +561,7 @@ window.descopeBridge = {
         updateClientInputs(inputs) {
             let client = {}
             try {
-                client = JSON.parse(wc.getAttribute('client') || '{}')
+                client = JSON.parse(this.component.getAttribute('client') || '{}')
             } catch (e) {}
             client = {
                 ...client,
