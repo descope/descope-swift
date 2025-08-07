@@ -78,28 +78,6 @@ extension DescopeFlow {
         }
         return nil
     }
-    
-    @MainActor
-    func logProvidedSession(logger: DescopeLogger?) {
-        if let provider = sessionProvider {
-            if let session = provider() {
-                logger.info("Provided session from custom provider", session)
-            } else {
-                logger.info("No provided session from custom provider")
-            }
-        } else {
-            let sdk = descope ?? Descope.sdk
-            if let session = sdk.sessionManager.session {
-                if session.refreshToken.isExpired {
-                    logger.info("Provided expired session from default provider", session)
-                } else {
-                    logger.info("Provided valid session from default provider", session)
-                }
-            } else {
-                logger.info("No provided session found")
-            }
-        }
-    }
 }
 
 extension Data {

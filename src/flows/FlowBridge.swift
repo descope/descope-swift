@@ -568,7 +568,7 @@ window.descopeBridge = {
                 ...JSON.parse(inputs || '{}'),
             }
             this.component.setAttribute('client', JSON.stringify(client))
-        }
+        },
 
         handleResponse(type, payload) {
             this.component.nativeResume(type, payload)
