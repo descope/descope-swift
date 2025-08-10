@@ -215,7 +215,7 @@ public class DescopeFlowCoordinator {
         sessionTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] timer in
             guard let coordinator = self else { return timer.invalidate() }
             Task { @MainActor in
-                coordinator.updateSessionToken()
+                coordinator.updateRefreshJwt()
             }
         }
     }
@@ -225,9 +225,9 @@ public class DescopeFlowCoordinator {
         sessionTimer = nil
     }
 
-    private func updateSessionToken() {
+    private func updateRefreshJwt() {
         guard let session = flow?.providedSession else { return }
-        bridge.updateToken(refreshJwt: session.refreshJwt)
+        bridge.updateRefreshJwt(session.refreshJwt)
     }
 
     // Resume
@@ -410,8 +410,7 @@ extension DescopeFlowCoordinator: FlowBridgeDelegate {
         } else if let session = flow?.providedSession {
             handleSuccess(AuthenticationResponse(sessionToken: session.sessionToken, refreshToken: session.refreshToken, user: session.user, isFirstAuthentication: false))
         } else {
-            logger.info("Couldn't find session to finish flow", flow, flow?.sessionProvider == nil ? "nil provider" : "custom provider")
-            flow?.logProvidedSession(logger: logger)
+            logger.error("Couldn't find session to finish flow", flow?.sessionProvider == nil ? "nil provider" : "custom provider")
             handleError(DescopeError.flowFailed.with(message: "No valid authentication tokens found"))
         }
     }

@@ -108,7 +108,13 @@ public class DescopeFlow {
     /// An optional timeout interval to set on the `URLRequest` object used for loading
     /// the flow webpage. If this is not set the platform default value is be used.
     public var requestTimeoutInterval: TimeInterval?
-
+    
+    /// An optional map of client inputs that will be provided to the flow.
+    ///
+    /// These values can be used in the flow editor to customize the flow's behavior
+    /// during execution. The values set on the map must be valid JSON types.
+    public var clientInputs: [String: Any] = [:]
+    
     /// An object that provides the ``DescopeSession`` value for the currently authenticated
     /// user if there is one, or `nil` otherwise.
     ///
