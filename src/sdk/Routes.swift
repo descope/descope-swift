@@ -479,6 +479,13 @@ public protocol DescopeEnchantedLink: Sendable {
 }
 
 
+public protocol DescopePush: Sendable {
+    func enroll(token: String, development: Bool, refreshJwt: String) async throws(DescopeError)
+    
+    func finish(transactionId: String, approved: Bool, refreshJwt: String) async throws(DescopeError)
+}
+
+
 /// Authenticate a user using an OAuth provider.
 ///
 /// Use the Descope console to configure which authentication provider you'd like to support.
