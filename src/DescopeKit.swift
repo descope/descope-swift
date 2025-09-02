@@ -92,6 +92,8 @@ public extension Descope {
     /// Provides functions for authentication with enchanted links.
     static var enchantedLink: DescopeEnchantedLink { sdk.enchantedLink }
     
+    static var push: DescopePush { sdk.push }
+    
     /// Provides functions for authentication with OAuth.
     static var oauth: DescopeOAuth { sdk.oauth }
     

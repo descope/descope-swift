@@ -967,6 +967,28 @@ public extension DescopePassword {
     }
 }
 
+public extension DescopePush {
+    func enroll(token: String, development: Bool, refreshJwt: String, completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+        Task {
+            do {
+                completion(.success(try await enroll(token: token, development: development, refreshJwt: refreshJwt)))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func finish(transactionId: String, result: String, refreshJwt: String, completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+        Task {
+            do {
+                completion(.success(try await finish(transactionId: transactionId, result: result, refreshJwt: refreshJwt)))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+}
+
 public extension DescopeSSO {
     /// Starts an SSO redirect chain to authenticate a user.
     /// 

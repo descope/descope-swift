@@ -30,6 +30,8 @@ public class DescopeSDK {
     /// Provides functions for authentication with enchanted links.
     public let enchantedLink: DescopeEnchantedLink
     
+    public let push: DescopePush
+    
     /// Provides functions for authentication with OAuth.
     public let oauth: DescopeOAuth
     
@@ -124,6 +126,7 @@ public class DescopeSDK {
         self.password = Password(client: client)
         self.magicLink = MagicLink(client: client)
         self.enchantedLink = EnchantedLink(client: client)
+        self.push = Push(client: client)
         self.oauth = OAuth(client: client)
         self.sso = SSO(client: client)
         self.accessKey = AccessKey(client: client)

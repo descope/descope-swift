@@ -297,6 +297,23 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         ])
     }
     
+    // MARK: - Push
+    
+    func pushEnrollDevice(provider: String, token: String, device: String, refreshJwt: String) async throws {
+        try await post("auth/push/update", headers: authorization(with: refreshJwt), body: [
+            "provider": provider,
+            "token": token,
+            "device": device,
+        ])
+    }
+    
+    func pushSignInFinish(transactionId: String, result: String, refreshJwt: String) async throws {
+        try await post("auth/push/signin/finish", headers: authorization(with: refreshJwt), body: [
+            "transactionId": transactionId,
+            "result": result,
+        ])
+    }
+    
     // MARK: - OAuth
     
     struct OAuthResponse: JSONResponse {
