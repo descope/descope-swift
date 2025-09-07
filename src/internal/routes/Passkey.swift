@@ -16,7 +16,7 @@ final class Passkey: DescopePasskey, Route {
         let startResponse = try await client.passkeySignUpStart(loginId: loginId, details: details)
         
         logger.info("Requesting register authorization for passkey sign up", startResponse.transactionId)
-        let registerResponse = try await performRegister(options: startResponse.options)
+        let registerResponse = try await Passkey.performRegister(options: startResponse.options, logger: logger)
         
         logger.info("Finishing passkey sign up", startResponse.transactionId)
         let jwtResponse = try await client.passkeySignUpFinish(transactionId: startResponse.transactionId, response: registerResponse)
@@ -33,7 +33,7 @@ final class Passkey: DescopePasskey, Route {
         let startResponse = try await client.passkeySignInStart(loginId: loginId, refreshJwt: refreshJwt, options: loginOptions)
         
         logger.info("Requesting assertion authorization for passkey sign in", startResponse.transactionId)
-        let assertionResponse = try await performAssertion(options: startResponse.options)
+        let assertionResponse = try await Passkey.performAssertion(options: startResponse.options, logger: logger)
 
         logger.info("Finishing passkey sign in", startResponse.transactionId)
         let jwtResponse = try await client.passkeySignInFinish(transactionId: startResponse.transactionId, response: assertionResponse)
@@ -52,12 +52,12 @@ final class Passkey: DescopePasskey, Route {
         let jwtResponse: DescopeClient.JWTResponse
         if startResponse.create {
             logger.info("Requesting register authorization for passkey sign up or in", startResponse.transactionId)
-            let registerResponse = try await performRegister(options: startResponse.options)
+            let registerResponse = try await Passkey.performRegister(options: startResponse.options, logger: logger)
             logger.info("Finishing passkey sign up", startResponse.transactionId)
             jwtResponse = try await client.passkeySignUpFinish(transactionId: startResponse.transactionId, response: registerResponse)
         } else {
             logger.info("Requesting assertion authorization for passkey sign up or in", startResponse.transactionId)
-            let assertionResponse = try await performAssertion(options: startResponse.options)
+            let assertionResponse = try await Passkey.performAssertion(options: startResponse.options, logger: logger)
             logger.info("Finishing passkey sign in", startResponse.transactionId)
             jwtResponse = try await client.passkeySignInFinish(transactionId: startResponse.transactionId, response: assertionResponse)
         }
@@ -73,7 +73,7 @@ final class Passkey: DescopePasskey, Route {
         let startResponse = try await client.passkeyAddStart(loginId: loginId, refreshJwt: refreshJwt)
         
         logger.info("Requesting register authorization for passkey update", startResponse.transactionId)
-        let registerResponse = try await performRegister(options: startResponse.options)
+        let registerResponse = try await Passkey.performRegister(options: startResponse.options, logger: logger)
         
         logger.info("Finishing passkey update", startResponse.transactionId)
         try await client.passkeyAddFinish(transactionId: startResponse.transactionId, response: registerResponse)
@@ -81,7 +81,7 @@ final class Passkey: DescopePasskey, Route {
 
     @MainActor
     @available(iOS 15.0, *)
-    private func performRegister(options: String) async throws -> String {
+    static func performRegister(options: String, logger: DescopeLogger?) async throws -> String {
         let registerOptions = try RegisterOptions(from: options)
         
         let publicKeyCredentialProvider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: registerOptions.rpId)
@@ -90,7 +90,7 @@ final class Passkey: DescopePasskey, Route {
         registerRequest.displayName = registerOptions.user.displayName
         registerRequest.userVerificationPreference = .required
         
-        let authorization = try await performAuthorization(request: registerRequest)
+        let authorization = try await performAuthorization(request: registerRequest, logger: logger)
         let response = try RegisterFinish.encodedResponse(from: authorization.credential)
         
         return response
@@ -98,7 +98,7 @@ final class Passkey: DescopePasskey, Route {
     
     @MainActor
     @available(iOS 15.0, *)
-    private func performAssertion(options: String) async throws -> String {
+    static func performAssertion(options: String, logger: DescopeLogger?) async throws -> String {
         let assertionOptions = try AssertionOptions(from: options)
         
         let publicKeyCredentialProvider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: assertionOptions.rpId)
@@ -107,56 +107,56 @@ final class Passkey: DescopePasskey, Route {
         assertionRequest.allowedCredentials = assertionOptions.allowCredentials.map { ASAuthorizationPlatformPublicKeyCredentialDescriptor(credentialID: $0) }
         assertionRequest.userVerificationPreference = .required
         
-        let authorization = try await performAuthorization(request: assertionRequest)
+        let authorization = try await performAuthorization(request: assertionRequest, logger: logger)
         let response = try AssertionFinish.encodedResponse(from: authorization.credential)
         
         return response
     }
+}
+
+@MainActor
+private func performAuthorization(request: ASAuthorizationRequest, logger: DescopeLogger?) async throws -> ASAuthorization {
+    let authDelegate = AuthorizationDelegate()
     
-    @MainActor
-    private func performAuthorization(request: ASAuthorizationRequest) async throws -> ASAuthorization {
-        let authDelegate = AuthorizationDelegate()
-        
-        let authController = ASAuthorizationController(authorizationRequests: [ request ] )
-        authController.delegate = authDelegate
+    let authController = ASAuthorizationController(authorizationRequests: [ request ] )
+    authController.delegate = authDelegate
 
-        // now that we have a reference to the ASAuthorizationController object we setup
-        // a cancellation handler to be invoked if the async task is cancelled
-        let cancellation = { @MainActor [weak authController] in
-            guard #available(iOS 16.0, macOS 13, *) else { return }
-            authController?.cancel()
-        }
+    // now that we have a reference to the ASAuthorizationController object we setup
+    // a cancellation handler to be invoked if the async task is cancelled
+    let cancellation = { @MainActor [weak authController] in
+        guard #available(iOS 16.0, macOS 13, *) else { return }
+        authController?.cancel()
+    }
 
-        // we pass a completion handler to the delegate object so we can use an async/await code
-        // style even though we're waiting for a regular callback. The onCancel closure ensures
-        // that we handle task cancellation properly by dismissing the authentication view.
-        let result = await withTaskCancellationHandler {
-            return await withCheckedContinuation { continuation in
-                authDelegate.completion = { result in
-                    continuation.resume(returning: result)
-                }
-                authController.performRequests()
+    // we pass a completion handler to the delegate object so we can use an async/await code
+    // style even though we're waiting for a regular callback. The onCancel closure ensures
+    // that we handle task cancellation properly by dismissing the authentication view.
+    let result = await withTaskCancellationHandler {
+        return await withCheckedContinuation { continuation in
+            authDelegate.completion = { result in
+                continuation.resume(returning: result)
             }
-        } onCancel: {
-            Task { @MainActor in
-                cancellation()
-            }
+            authController.performRequests()
         }
+    } onCancel: {
+        Task { @MainActor in
+            cancellation()
+        }
+    }
 
-        switch result {
-        case .failure(ASAuthorizationError.canceled):
-            logger.info("Passkey authorization cancelled")
-            throw DescopeError.passkeyCancelled
-        case .failure(let error as NSError) where error.domain == "WKErrorDomain" && error.code == 31:
-            logger.error("Passkey authorization timed out", error)
-            throw DescopeError.passkeyCancelled.with(message: "The operation timed out")
-        case .failure(let error):
-            logger.error("Passkey authorization failed", error)
-            throw DescopeError.passkeyFailed.with(cause: error)
-        case .success(let authorization):
-            logger.debug("Processing passkey authorization", authorization)
-            return authorization
-        }
+    switch result {
+    case .failure(ASAuthorizationError.canceled):
+        logger.info("Passkey authorization cancelled")
+        throw DescopeError.passkeyCancelled
+    case .failure(let error as NSError) where error.domain == "WKErrorDomain" && error.code == 31:
+        logger.error("Passkey authorization timed out", error)
+        throw DescopeError.passkeyCancelled.with(message: "The operation timed out")
+    case .failure(let error):
+        logger.error("Passkey authorization failed", error)
+        throw DescopeError.passkeyFailed.with(cause: error)
+    case .success(let authorization):
+        logger.debug("Processing passkey authorization", authorization)
+        return authorization
     }
 }
 
