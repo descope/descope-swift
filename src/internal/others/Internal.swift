@@ -105,6 +105,25 @@ extension String {
     }
 }
 
+extension Task where Success == Never, Failure == Never {
+    static func checkCancellation(throwing err: DescopeError) throws(DescopeError) {
+        do {
+            try checkCancellation()
+        } catch {
+            throw err
+        }
+    }
+    
+    static func sleep(seconds: TimeInterval, throwing err: DescopeError) async throws(DescopeError) {
+        do {
+            let nanoseconds = UInt64(seconds * TimeInterval(NSEC_PER_SEC))
+            try await Task.sleep(nanoseconds: nanoseconds)
+        } catch {
+            throw err
+        }
+    }
+}
+
 class DefaultPresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding, ASAuthorizationControllerPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
         return presentationAnchor

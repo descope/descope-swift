@@ -11,7 +11,7 @@ final class Passkey: DescopePasskey, Route {
     
     @MainActor
     @available(iOS 15.0, *)
-    func signUp(loginId: String, details: SignUpDetails?) async throws -> AuthenticationResponse {
+    func signUp(loginId: String, details: SignUpDetails?) async throws(DescopeError) -> AuthenticationResponse {
         logger.info("Starting passkey sign up", loginId)
         let startResponse = try await client.passkeySignUpStart(loginId: loginId, details: details)
         
@@ -27,7 +27,7 @@ final class Passkey: DescopePasskey, Route {
     
     @MainActor
     @available(iOS 15.0, *)
-    func signIn(loginId: String, options: [SignInOptions]) async throws -> AuthenticationResponse {
+    func signIn(loginId: String, options: [SignInOptions]) async throws(DescopeError) -> AuthenticationResponse {
         logger.info("Starting passkey sign in", loginId)
         let (refreshJwt, loginOptions) = try options.convert()
         let startResponse = try await client.passkeySignInStart(loginId: loginId, refreshJwt: refreshJwt, options: loginOptions)
@@ -44,7 +44,7 @@ final class Passkey: DescopePasskey, Route {
     
     @MainActor
     @available(iOS 15.0, *)
-    func signUpOrIn(loginId: String, options: [SignInOptions]) async throws -> AuthenticationResponse {
+    func signUpOrIn(loginId: String, options: [SignInOptions]) async throws(DescopeError) -> AuthenticationResponse {
         logger.info("Starting passkey sign up or in", loginId)
         let (refreshJwt, loginOptions) = try options.convert()
         let startResponse = try await client.passkeySignUpInStart(loginId: loginId, refreshJwt: refreshJwt, options: loginOptions)
@@ -68,7 +68,7 @@ final class Passkey: DescopePasskey, Route {
     
     @MainActor
     @available(iOS 15.0, *)
-    func add(loginId: String, refreshJwt: String) async throws {
+    func add(loginId: String, refreshJwt: String) async throws(DescopeError) {
         logger.info("Starting passkey update", loginId)
         let startResponse = try await client.passkeyAddStart(loginId: loginId, refreshJwt: refreshJwt)
         

@@ -59,7 +59,7 @@ extension DescopeClient.TenantsResponse {
 }
 
 extension DescopeClient.JWTResponse {
-    func convert() throws -> AuthenticationResponse {
+    func convert() throws(DescopeError) -> AuthenticationResponse {
         guard let sessionJwt, !sessionJwt.isEmpty else { throw DescopeError.decodeError.with(message: "Missing session JWT") }
         guard let refreshJwt, !refreshJwt.isEmpty else { throw DescopeError.decodeError.with(message: "Missing refresh JWT") }
         guard let user else { throw DescopeError.decodeError.with(message: "Missing user details") }
@@ -68,7 +68,7 @@ extension DescopeClient.JWTResponse {
 }
 
 extension DescopeClient.MaskedAddress {
-    func convert(method: DeliveryMethod) throws -> String {
+    func convert(method: DeliveryMethod) throws(DescopeError) -> String {
         switch method {
         case .email:
             guard let maskedEmail else { throw DescopeError.decodeError.with(message: "Missing masked email") }
@@ -81,7 +81,7 @@ extension DescopeClient.MaskedAddress {
 }
 
 extension [SignInOptions] {
-    func convert() throws -> (refreshJwt: String?, loginOptions: DescopeClient.LoginOptions?) {
+    func convert() throws(DescopeError) -> (refreshJwt: String?, loginOptions: DescopeClient.LoginOptions?) {
         guard !isEmpty else { return (nil, nil) }
         var refreshJwt: String?
         var loginOptions = DescopeClient.LoginOptions()

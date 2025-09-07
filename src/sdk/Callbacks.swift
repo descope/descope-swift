@@ -16,9 +16,10 @@ public extension DescopeAccessKey {
     /// - Parameter accessKey: the access key's clear text
     /// 
     /// - Returns: A ``DescopeToken`` upon successful exchange.
-    func exchange(accessKey: String, completion: @escaping @Sendable (Result<DescopeToken, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func exchange(accessKey: String, completion: @escaping @Sendable (Result<DescopeToken, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await exchange(accessKey: accessKey)))
             } catch {
                 completion(.failure(error))
@@ -33,9 +34,10 @@ public extension DescopeAuth {
     /// - Parameter refreshJwt: the `refreshJwt` from an active ``DescopeSession``.
     /// 
     /// - Returns: A ``DescopeUser`` object with the user details.
-    func me(refreshJwt: String, completion: @escaping @Sendable (Result<DescopeUser, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func me(refreshJwt: String, completion: @escaping @Sendable (Result<DescopeUser, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await me(refreshJwt: refreshJwt)))
             } catch {
                 completion(.failure(error))
@@ -54,9 +56,10 @@ public extension DescopeAuth {
     ///   - refreshJwt: the `refreshJwt` from an active ``DescopeSession``.
     /// 
     /// - Returns: A list of one or more ``DescopeTenant`` values.
-    func tenants(dct: Bool, tenantIds: [String], refreshJwt: String, completion: @escaping @Sendable (Result<[DescopeTenant], Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func tenants(dct: Bool, tenantIds: [String], refreshJwt: String, completion: @escaping @Sendable (Result<[DescopeTenant], DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await tenants(dct: dct, tenantIds: tenantIds, refreshJwt: refreshJwt)))
             } catch {
                 completion(.failure(error))
@@ -78,9 +81,10 @@ public extension DescopeAuth {
     /// - Parameter refreshJwt: the `refreshJwt` from an active ``DescopeSession``.
     /// 
     /// - Returns: A new ``RefreshResponse`` with a refreshed `sessionJwt`.
-    func refreshSession(refreshJwt: String, completion: @escaping @Sendable (Result<RefreshResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func refreshSession(refreshJwt: String, completion: @escaping @Sendable (Result<RefreshResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await refreshSession(refreshJwt: refreshJwt)))
             } catch {
                 completion(.failure(error))
@@ -115,9 +119,10 @@ public extension DescopeAuth {
     /// - Parameter externalToken: the external token to migrate.
     /// 
     /// - Returns: A new ``AuthenticationResponse`` if the migration was successful.
-    func migrateSession(externalToken: String, completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func migrateSession(externalToken: String, completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await migrateSession(externalToken: externalToken)))
             } catch {
                 completion(.failure(error))
@@ -153,9 +158,10 @@ public extension DescopeAuth {
     ///   - revoke: Pass `.currentSession` to revoke the session in the `refreshJwt`
     ///     parameter or see ``RevokeType`` for more options.
     ///   - refreshJwt: The `refreshJwt` from an active ``DescopeSession``.
-    func revokeSessions(_ revoke: RevokeType, refreshJwt: String, completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func revokeSessions(_ revoke: RevokeType, refreshJwt: String, completion: @escaping @Sendable (Result<Void, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await revokeSessions(revoke, refreshJwt: refreshJwt)))
             } catch {
                 completion(.failure(error))
@@ -186,9 +192,10 @@ public extension DescopeEnchantedLink {
     /// 
     /// - Returns: An ``EnchantedLinkResponse`` object with the `linkId` to show the
     ///     user and `pendingRef` for polling for the session.
-    func signUp(loginId: String, details: SignUpDetails?, redirectURL: String?, completion: @escaping @Sendable (Result<EnchantedLinkResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func signUp(loginId: String, details: SignUpDetails?, redirectURL: String?, completion: @escaping @Sendable (Result<EnchantedLinkResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signUp(loginId: loginId, details: details, redirectURL: redirectURL)))
             } catch {
                 completion(.failure(error))
@@ -214,9 +221,10 @@ public extension DescopeEnchantedLink {
     /// 
     /// - Returns: An ``EnchantedLinkResponse`` object with the `linkId` to show the
     ///     user and `pendingRef` for polling for the session.
-    func signIn(loginId: String, redirectURL: String?, options: [SignInOptions], completion: @escaping @Sendable (Result<EnchantedLinkResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func signIn(loginId: String, redirectURL: String?, options: [SignInOptions], completion: @escaping @Sendable (Result<EnchantedLinkResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signIn(loginId: loginId, redirectURL: redirectURL, options: options)))
             } catch {
                 completion(.failure(error))
@@ -243,9 +251,10 @@ public extension DescopeEnchantedLink {
     /// 
     /// - Returns: An ``EnchantedLinkResponse`` object with the `linkId` to show the
     ///     user and `pendingRef` for polling for the session.
-    func signUpOrIn(loginId: String, redirectURL: String?, options: [SignInOptions], completion: @escaping @Sendable (Result<EnchantedLinkResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func signUpOrIn(loginId: String, redirectURL: String?, options: [SignInOptions], completion: @escaping @Sendable (Result<EnchantedLinkResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signUpOrIn(loginId: loginId, redirectURL: redirectURL, options: options)))
             } catch {
                 completion(.failure(error))
@@ -275,9 +284,10 @@ public extension DescopeEnchantedLink {
     /// 
     /// - Returns: An ``EnchantedLinkResponse`` object with the `linkId` to show the
     ///     user and `pendingRef` for polling for the session.
-    func updateEmail(_ email: String, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions, completion: @escaping @Sendable (Result<EnchantedLinkResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func updateEmail(_ email: String, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions, completion: @escaping @Sendable (Result<EnchantedLinkResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await updateEmail(email, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: options)))
             } catch {
                 completion(.failure(error))
@@ -298,9 +308,10 @@ public extension DescopeEnchantedLink {
     /// - Parameter pendingRef: The pendingRef value from an ``EnchantedLinkResponse`` object.
     /// 
     /// - Returns: An ``AuthenticationResponse`` value upon successful authentication.
-    func checkForSession(pendingRef: String, completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func checkForSession(pendingRef: String, completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await checkForSession(pendingRef: pendingRef)))
             } catch {
                 completion(.failure(error))
@@ -327,9 +338,10 @@ public extension DescopeEnchantedLink {
     ///     given a default value of 2 minutes is used.
     /// 
     /// - Returns: An ``AuthenticationResponse`` value upon successful authentication.
-    func pollForSession(pendingRef: String, timeout: TimeInterval?, completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func pollForSession(pendingRef: String, timeout: TimeInterval?, completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await pollForSession(pendingRef: pendingRef, timeout: timeout)))
             } catch {
                 completion(.failure(error))
@@ -356,9 +368,10 @@ public extension DescopeMagicLink {
     ///   - details: Optional details about the user signing up.
     ///   - redirectURL: Optional URL that will be used to generate the magic link.
     ///     If not given, the project default will be used.
-    func signUp(with method: DeliveryMethod, loginId: String, details: SignUpDetails?, redirectURL: String?, completion: @escaping @Sendable (Result<String, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func signUp(with method: DeliveryMethod, loginId: String, details: SignUpDetails?, redirectURL: String?, completion: @escaping @Sendable (Result<String, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signUp(with: method, loginId: loginId, details: details, redirectURL: redirectURL)))
             } catch {
                 completion(.failure(error))
@@ -379,9 +392,10 @@ public extension DescopeMagicLink {
     ///   - redirectURL: Optional URL that will be used to generate the magic link.
     ///     If not given, the project default will be used.
     ///   - options: Additional behaviors to perform during authentication.
-    func signIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, options: [SignInOptions], completion: @escaping @Sendable (Result<String, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func signIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, options: [SignInOptions], completion: @escaping @Sendable (Result<String, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signIn(with: method, loginId: loginId, redirectURL: redirectURL, options: options)))
             } catch {
                 completion(.failure(error))
@@ -406,9 +420,10 @@ public extension DescopeMagicLink {
     ///   - redirectURL: Optional URL that will be used to generate the magic link.
     ///     If not given, the project default will be used.
     ///   - options: Additional behaviors to perform during authentication.
-    func signUpOrIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, options: [SignInOptions], completion: @escaping @Sendable (Result<String, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func signUpOrIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, options: [SignInOptions], completion: @escaping @Sendable (Result<String, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signUpOrIn(with: method, loginId: loginId, redirectURL: redirectURL, options: options)))
             } catch {
                 completion(.failure(error))
@@ -431,9 +446,10 @@ public extension DescopeMagicLink {
     ///   - options: Whether to add the new email address as a loginId for the updated user, and
     ///     in that case, if another user already has the same email address as a loginId how to
     ///     merge the two users. See the documentation for ``UpdateOptions`` for more details.
-    func updateEmail(_ email: String, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions, completion: @escaping @Sendable (Result<String, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func updateEmail(_ email: String, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions, completion: @escaping @Sendable (Result<String, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await updateEmail(email, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: options)))
             } catch {
                 completion(.failure(error))
@@ -460,9 +476,10 @@ public extension DescopeMagicLink {
     ///   - options: Whether to add the new phone number as a loginId for the updated user, and
     ///     in that case, if another user already has the same phone number as a loginId how to
     ///     merge the two users. See the documentation for ``UpdateOptions`` for more details.
-    func updatePhone(_ phone: String, with method: DeliveryMethod, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions, completion: @escaping @Sendable (Result<String, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func updatePhone(_ phone: String, with method: DeliveryMethod, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions, completion: @escaping @Sendable (Result<String, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await updatePhone(phone, with: method, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: options)))
             } catch {
                 completion(.failure(error))
@@ -479,9 +496,10 @@ public extension DescopeMagicLink {
     /// - Parameter token: The extracted token from the `t` URL parameter from the magic link.
     /// 
     /// - Returns: An ``AuthenticationResponse`` value upon successful authentication.
-    func verify(token: String, completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func verify(token: String, completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await verify(token: token)))
             } catch {
                 completion(.failure(error))
@@ -521,10 +539,11 @@ public extension DescopeOAuth {
     ///     an activity indicator or switch the user interface to a loading state before calling
     ///     this, otherwise the user might accidentally interact with the app when the
     ///     authentication view is not being displayed.
+    @_documentation(visibility: internal)
     @MainActor
-    func web(provider: OAuthProvider, accessSharedUserData: Bool, options: [SignInOptions], completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    func web(provider: OAuthProvider, accessSharedUserData: Bool, options: [SignInOptions], completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await web(provider: provider, accessSharedUserData: accessSharedUserData, options: options)))
             } catch {
                 completion(.failure(error))
@@ -553,9 +572,10 @@ public extension DescopeOAuth {
     /// 
     /// - Returns: A URL to redirect to in order to authenticate the user against
     ///     the chosen provider.
-    func webStart(provider: OAuthProvider, redirectURL: String?, options: [SignInOptions], completion: @escaping @Sendable (Result<URL, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func webStart(provider: OAuthProvider, redirectURL: String?, options: [SignInOptions], completion: @escaping @Sendable (Result<URL, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await webStart(provider: provider, redirectURL: redirectURL, options: options)))
             } catch {
                 completion(.failure(error))
@@ -570,9 +590,10 @@ public extension DescopeOAuth {
     ///     `code` URL parameter.
     /// 
     /// - Returns: An ``AuthenticationResponse`` value upon successful exchange.
-    func webExchange(code: String, completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func webExchange(code: String, completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await webExchange(code: code)))
             } catch {
                 completion(.failure(error))
@@ -611,10 +632,11 @@ public extension DescopeOAuth {
     /// 
     /// - SeeAlso: For more details about configuring your app and generating client secrets
     ///     see the [Sign in with Apple documentation](https://developer.apple.com/sign-in-with-apple/get-started/).
+    @_documentation(visibility: internal)
     @MainActor
-    func native(provider: OAuthProvider, options: [SignInOptions], completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    func native(provider: OAuthProvider, options: [SignInOptions], completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await native(provider: provider, options: options)))
             } catch {
                 completion(.failure(error))
@@ -636,9 +658,10 @@ public extension DescopeOTP {
     ///   - loginId: What identifies the user when logging in,
     ///     typically an email, phone, or any other unique identifier.
     ///   - details: Optional details about the user signing up.
-    func signUp(with method: DeliveryMethod, loginId: String, details: SignUpDetails?, completion: @escaping @Sendable (Result<String, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func signUp(with method: DeliveryMethod, loginId: String, details: SignUpDetails?, completion: @escaping @Sendable (Result<String, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signUp(with: method, loginId: loginId, details: details)))
             } catch {
                 completion(.failure(error))
@@ -654,9 +677,10 @@ public extension DescopeOTP {
     ///   - loginId: What identifies the user when logging in,
     ///     typically an email, phone, or any other unique identifier.
     ///   - options: Additional behaviors to perform during authentication.
-    func signIn(with method: DeliveryMethod, loginId: String, options: [SignInOptions], completion: @escaping @Sendable (Result<String, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func signIn(with method: DeliveryMethod, loginId: String, options: [SignInOptions], completion: @escaping @Sendable (Result<String, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signIn(with: method, loginId: loginId, options: options)))
             } catch {
                 completion(.failure(error))
@@ -676,9 +700,10 @@ public extension DescopeOTP {
     ///   - loginId: What identifies the user when logging in,
     ///     typically an email, phone, or any other unique identifier
     ///   - options: Additional behaviors to perform during authentication.
-    func signUpOrIn(with method: DeliveryMethod, loginId: String, options: [SignInOptions], completion: @escaping @Sendable (Result<String, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func signUpOrIn(with method: DeliveryMethod, loginId: String, options: [SignInOptions], completion: @escaping @Sendable (Result<String, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signUpOrIn(with: method, loginId: loginId, options: options)))
             } catch {
                 completion(.failure(error))
@@ -694,9 +719,10 @@ public extension DescopeOTP {
     ///   - code: The code to validate.
     /// 
     /// - Returns: An ``AuthenticationResponse`` value upon successful authentication.
-    func verify(with method: DeliveryMethod, loginId: String, code: String, completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func verify(with method: DeliveryMethod, loginId: String, code: String, completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await verify(with: method, loginId: loginId, code: code)))
             } catch {
                 completion(.failure(error))
@@ -717,9 +743,10 @@ public extension DescopeOTP {
     ///   - options: Whether to add the new email address as a loginId for the updated user, and
     ///     in that case, if another user already has the same email address as a loginId how to
     ///     merge the two users. See the documentation for ``UpdateOptions`` for more details.
-    func updateEmail(_ email: String, loginId: String, refreshJwt: String, options: UpdateOptions, completion: @escaping @Sendable (Result<String, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func updateEmail(_ email: String, loginId: String, refreshJwt: String, options: UpdateOptions, completion: @escaping @Sendable (Result<String, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await updateEmail(email, loginId: loginId, refreshJwt: refreshJwt, options: options)))
             } catch {
                 completion(.failure(error))
@@ -743,9 +770,10 @@ public extension DescopeOTP {
     ///   - options: Whether to add the new phone number as a loginId for the updated user, and
     ///     in that case, if another user already has the same phone number as a loginId how to
     ///     merge the two users. See the documentation for ``UpdateOptions`` for more details.
-    func updatePhone(_ phone: String, with method: DeliveryMethod, loginId: String, refreshJwt: String, options: UpdateOptions, completion: @escaping @Sendable (Result<String, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func updatePhone(_ phone: String, with method: DeliveryMethod, loginId: String, refreshJwt: String, options: UpdateOptions, completion: @escaping @Sendable (Result<String, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await updatePhone(phone, with: method, loginId: loginId, refreshJwt: refreshJwt, options: options)))
             } catch {
                 completion(.failure(error))
@@ -766,10 +794,11 @@ public extension DescopePasskey {
     ///     the authentication view is cancelled by the user.
     /// 
     /// - Returns: An ``AuthenticationResponse`` value upon successful authentication.
+    @_documentation(visibility: internal)
     @available(iOS 15.0, *)
-    func signUp(loginId: String, details: SignUpDetails?, completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    func signUp(loginId: String, details: SignUpDetails?, completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signUp(loginId: loginId, details: details)))
             } catch {
                 completion(.failure(error))
@@ -788,10 +817,11 @@ public extension DescopePasskey {
     ///     the authentication view is cancelled by the user.
     /// 
     /// - Returns: An ``AuthenticationResponse`` value upon successful authentication.
+    @_documentation(visibility: internal)
     @available(iOS 15.0, *)
-    func signIn(loginId: String, options: [SignInOptions], completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    func signIn(loginId: String, options: [SignInOptions], completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signIn(loginId: loginId, options: options)))
             } catch {
                 completion(.failure(error))
@@ -813,10 +843,11 @@ public extension DescopePasskey {
     ///     the authentication view is cancelled by the user.
     /// 
     /// - Returns: An ``AuthenticationResponse`` value upon successful authentication.
+    @_documentation(visibility: internal)
     @available(iOS 15.0, *)
-    func signUpOrIn(loginId: String, options: [SignInOptions], completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    func signUpOrIn(loginId: String, options: [SignInOptions], completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signUpOrIn(loginId: loginId, options: options)))
             } catch {
                 completion(.failure(error))
@@ -833,10 +864,11 @@ public extension DescopePasskey {
     /// 
     /// - Throws: ``DescopeError/passkeyCancelled`` if the async task is cancelled or
     ///     the authentication view is cancelled by the user.
+    @_documentation(visibility: internal)
     @available(iOS 15.0, *)
-    func add(loginId: String, refreshJwt: String, completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+    func add(loginId: String, refreshJwt: String, completion: @escaping @Sendable (Result<Void, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await add(loginId: loginId, refreshJwt: refreshJwt)))
             } catch {
                 completion(.failure(error))
@@ -855,9 +887,10 @@ public extension DescopePassword {
     ///   - password: The user's password.
     /// 
     /// - Returns: An ``AuthenticationResponse`` value upon successful authentication.
-    func signUp(loginId: String, password: String, details: SignUpDetails?, completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func signUp(loginId: String, password: String, details: SignUpDetails?, completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signUp(loginId: loginId, password: password, details: details)))
             } catch {
                 completion(.failure(error))
@@ -873,9 +906,10 @@ public extension DescopePassword {
     ///   - password: The user's password.
     /// 
     /// - Returns: An ``AuthenticationResponse`` value upon successful authentication.
-    func signIn(loginId: String, password: String, completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func signIn(loginId: String, password: String, completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signIn(loginId: loginId, password: password)))
             } catch {
                 completion(.failure(error))
@@ -895,9 +929,10 @@ public extension DescopePassword {
     ///   - loginId: The existing user's loginId.
     ///   - newPassword: The new password to set for the user.
     ///   - refreshJwt: The existing user's `refreshJwt` from an active ``DescopeSession``.
-    func update(loginId: String, newPassword: String, refreshJwt: String, completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func update(loginId: String, newPassword: String, refreshJwt: String, completion: @escaping @Sendable (Result<Void, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await update(loginId: loginId, newPassword: newPassword, refreshJwt: refreshJwt)))
             } catch {
                 completion(.failure(error))
@@ -916,9 +951,10 @@ public extension DescopePassword {
     ///   - newPassword: The new password to set for the user.
     /// 
     /// - Returns: An ``AuthenticationResponse`` value upon successful replacement and authentication.
-    func replace(loginId: String, oldPassword: String, newPassword: String, completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func replace(loginId: String, oldPassword: String, newPassword: String, completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await replace(loginId: loginId, oldPassword: oldPassword, newPassword: newPassword)))
             } catch {
                 completion(.failure(error))
@@ -939,9 +975,10 @@ public extension DescopePassword {
     ///   - loginId: The existing user's loginId.
     ///   - redirectURL: Optional URL that is used by Magic Link or Enchanted Link
     ///     if those are the chosen reset methods.
-    func sendReset(loginId: String, redirectURL: String?, completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func sendReset(loginId: String, redirectURL: String?, completion: @escaping @Sendable (Result<Void, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await sendReset(loginId: loginId, redirectURL: redirectURL)))
             } catch {
                 completion(.failure(error))
@@ -956,9 +993,10 @@ public extension DescopePassword {
     /// for a better user experience.
     /// 
     /// In any case, all password rules are enforced by Descope on the server side as well.
-    func getPolicy(completion: @escaping @Sendable (Result<PasswordPolicyResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func getPolicy(completion: @escaping @Sendable (Result<PasswordPolicyResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await getPolicy()))
             } catch {
                 completion(.failure(error))
@@ -983,9 +1021,10 @@ public extension DescopeSSO {
     /// 
     /// - Returns: A URL to redirect to in order to authenticate the user against
     ///     the chosen provider.
-    func start(emailOrTenantName: String, redirectURL: String?, options: [SignInOptions], completion: @escaping @Sendable (Result<URL, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func start(emailOrTenantName: String, redirectURL: String?, options: [SignInOptions], completion: @escaping @Sendable (Result<URL, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await start(emailOrTenantName: emailOrTenantName, redirectURL: redirectURL, options: options)))
             } catch {
                 completion(.failure(error))
@@ -1000,9 +1039,10 @@ public extension DescopeSSO {
     ///     `code` URL parameter.
     /// 
     /// - Returns: An ``AuthenticationResponse`` value upon successful exchange.
-    func exchange(code: String, completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func exchange(code: String, completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await exchange(code: code)))
             } catch {
                 completion(.failure(error))
@@ -1021,9 +1061,10 @@ public extension DescopeTOTP {
     ///   - details: Optional details about the user signing up.
     /// 
     /// - Returns: A ``TOTPResponse`` object with the key (seed) in multiple formats.
-    func signUp(loginId: String, details: SignUpDetails?, completion: @escaping @Sendable (Result<TOTPResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func signUp(loginId: String, details: SignUpDetails?, completion: @escaping @Sendable (Result<TOTPResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await signUp(loginId: loginId, details: details)))
             } catch {
                 completion(.failure(error))
@@ -1044,9 +1085,10 @@ public extension DescopeTOTP {
     ///   - refreshJwt: The existing user's `refreshJwt` from an active ``DescopeSession``.
     /// 
     /// - Returns: A ``TOTPResponse`` object with the key (seed) in multiple formats.
-    func update(loginId: String, refreshJwt: String, completion: @escaping @Sendable (Result<TOTPResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func update(loginId: String, refreshJwt: String, completion: @escaping @Sendable (Result<TOTPResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await update(loginId: loginId, refreshJwt: refreshJwt)))
             } catch {
                 completion(.failure(error))
@@ -1062,9 +1104,10 @@ public extension DescopeTOTP {
     ///   - options: Additional behaviors to perform during authentication.
     /// 
     /// - Returns: An ``AuthenticationResponse`` value upon successful authentication.
-    func verify(loginId: String, code: String, options: [SignInOptions], completion: @escaping @Sendable (Result<AuthenticationResponse, Error>) -> Void) {
+    @_documentation(visibility: internal)
+    func verify(loginId: String, code: String, options: [SignInOptions], completion: @escaping @Sendable (Result<AuthenticationResponse, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await verify(loginId: loginId, code: code, options: options)))
             } catch {
                 completion(.failure(error))
