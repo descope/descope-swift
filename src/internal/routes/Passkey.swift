@@ -81,7 +81,7 @@ final class Passkey: DescopePasskey, Route {
 
     @MainActor
     @available(iOS 15.0, *)
-    static func performRegister(options: String, logger: DescopeLogger?) async throws -> String {
+    static func performRegister(options: String, logger: DescopeLogger?) async throws(DescopeError) -> String {
         let registerOptions = try RegisterOptions(from: options)
         
         let publicKeyCredentialProvider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: registerOptions.rpId)
@@ -98,7 +98,7 @@ final class Passkey: DescopePasskey, Route {
     
     @MainActor
     @available(iOS 15.0, *)
-    static func performAssertion(options: String, logger: DescopeLogger?) async throws -> String {
+    static func performAssertion(options: String, logger: DescopeLogger?) async throws(DescopeError) -> String {
         let assertionOptions = try AssertionOptions(from: options)
         
         let publicKeyCredentialProvider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: assertionOptions.rpId)
@@ -115,7 +115,7 @@ final class Passkey: DescopePasskey, Route {
 }
 
 @MainActor
-private func performAuthorization(request: ASAuthorizationRequest, logger: DescopeLogger?) async throws -> ASAuthorization {
+private func performAuthorization(request: ASAuthorizationRequest, logger: DescopeLogger?) async throws(DescopeError) -> ASAuthorization {
     let authDelegate = AuthorizationDelegate()
     
     let authController = ASAuthorizationController(authorizationRequests: [ request ] )
@@ -165,7 +165,7 @@ private struct RegisterOptions {
     var rpId: String
     var user: (id: Data, name: String, displayName: String?)
 
-    init(from options: String) throws {
+    init(from options: String) throws(DescopeError) {
         guard let root = try? JSONDecoder().decode(Root.self, from: Data(options.utf8)) else { throw DescopeError.decodeError.with(message: "Invalid passkey register options") }
         guard let challengeData = Data(base64URLEncoded: root.publicKey.challenge) else { throw DescopeError.decodeError.with(message: "Invalid passkey challenge") }
         guard let userId = Data(base64URLEncoded: root.publicKey.user.id) else { throw DescopeError.decodeError.with(message: "Invalid passkey user id") }
@@ -200,13 +200,13 @@ private struct AssertionOptions {
     var rpId: String
     var allowCredentials: [Data]
     
-    init(from options: String) throws {
+    init(from options: String) throws(DescopeError) {
         guard let root = try? JSONDecoder().decode(Root.self, from: Data(options.utf8)) else { throw DescopeError.decodeError.with(message: "Invalid passkey assertion options") }
         guard let challengeData = Data(base64URLEncoded: root.publicKey.challenge) else { throw DescopeError.decodeError.with(message: "Invalid passkey challenge") }
         challenge = challengeData
         rpId = root.publicKey.rpId
-        allowCredentials = try root.publicKey.allowCredentials.map {
-            guard let credentialId = Data(base64URLEncoded: $0.id) else { throw DescopeError.decodeError.with(message: "Invalid credential id") }
+        allowCredentials = try root.publicKey.allowCredentials.map { (credential) throws(DescopeError) -> Data in
+            guard let credentialId = Data(base64URLEncoded: credential.id) else { throw DescopeError.decodeError.with(message: "Invalid credential id") }
             return credentialId
         }
     }
@@ -238,7 +238,7 @@ private struct RegisterFinish: Codable {
     }
     
     @available(iOS 15.0, *)
-    static func encodedResponse(from credential: ASAuthorizationCredential) throws -> String {
+    static func encodedResponse(from credential: ASAuthorizationCredential) throws(DescopeError) -> String {
         guard let registration = credential as? ASAuthorizationPlatformPublicKeyCredentialRegistration else { throw DescopeError.passkeyFailed.with(message: "Invalid register credential type") }
         
         let credentialId = registration.credentialID.base64URLEncodedString()
@@ -267,7 +267,7 @@ private struct AssertionFinish: Codable {
     }
     
     @available(iOS 15.0, *)
-    static func encodedResponse(from credential: ASAuthorizationCredential) throws -> String {
+    static func encodedResponse(from credential: ASAuthorizationCredential) throws(DescopeError) -> String {
         guard let assertion = credential as? ASAuthorizationPlatformPublicKeyCredentialAssertion else { throw DescopeError.passkeyFailed.with(message: "Invalid assertion credential type") }
         
         let credentialId = assertion.credentialID.base64URLEncodedString()
@@ -283,7 +283,7 @@ private struct AssertionFinish: Codable {
         return encoded
     }
 
-    static func parseUserHandle(_ value: Data) throws -> String {
+    static func parseUserHandle(_ value: Data) throws(DescopeError) -> String {
         guard let stringValue = String(bytes: value, encoding: .utf8) else { throw DescopeError.passkeyFailed.with(message: "Invalid user handle") }
         if stringValue.count >= 30, stringValue.hasPrefix("V") {
             return stringValue
