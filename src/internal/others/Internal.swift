@@ -207,10 +207,10 @@ extension AuthenticationResponse: Codable {
 }
 
 extension DescopeUser {
-    struct SerializedUser: Codable {
+    struct SerializedUser: Codable, Equatable {
         var userId: String
         var loginIds: [String]
-        var status: Status?
+        var status: String?
         var createdAt: Date
         var email: String?
         var isVerifiedEmail: Bool
@@ -224,55 +224,60 @@ extension DescopeUser {
         var authentication: Authentication?
         var authorization: Authorization?
         var customAttributes: String?
-        
-        static func serialize(_ user: DescopeUser) -> SerializedUser {
-            var customAttributes = "{}"
-            if JSONSerialization.isValidJSONObject(customAttributes), let data = try? JSONSerialization.data(withJSONObject: customAttributes), let value = String(bytes: data, encoding: .utf8) {
-                customAttributes = value
-            }
-            
-            return SerializedUser(
-                userId: user.userId,
-                loginIds: user.loginIds,
-                status: user.status,
-                createdAt: user.createdAt,
-                email: user.email,
-                isVerifiedEmail: user.isVerifiedEmail,
-                phone: user.phone,
-                isVerifiedPhone: user.isVerifiedPhone,
-                name: user.name,
-                givenName: user.givenName,
-                middleName: user.middleName,
-                familyName: user.familyName,
-                picture: user.picture,
-                authentication: user.authentication,
-                authorization: user.authorization,
-                customAttributes: customAttributes)
+        var isUpdateRequired: Bool?
+    }
+    
+    static func serialize(_ user: DescopeUser) -> SerializedUser {
+        var customAttributes = "{}"
+        if JSONSerialization.isValidJSONObject(user.customAttributes), let data = try? JSONSerialization.data(withJSONObject: user.customAttributes), let value = String(bytes: data, encoding: .utf8) {
+            customAttributes = value
         }
         
-        static func deserialize(_ user: SerializedUser) -> DescopeUser {
-            var customAttributes: [String: Any] = [:]
-            if let value = user.customAttributes, let json = try? JSONSerialization.jsonObject(with: Data(value.utf8)) {
-                customAttributes = json as? [String: Any] ?? [:]
-            }
-            
-            return DescopeUser(
-                userId: user.userId,
-                loginIds: user.loginIds,
-                status: user.status ?? .enabled,
-                createdAt: user.createdAt,
-                email: user.email,
-                isVerifiedEmail: user.isVerifiedEmail,
-                phone: user.phone,
-                isVerifiedPhone: user.isVerifiedPhone,
-                name: user.name,
-                givenName: user.givenName,
-                middleName: user.middleName,
-                familyName: user.familyName,
-                picture: user.picture,
-                authentication: user.authentication ?? Authentication(passkey: false, password: false, totp: false, oauth: [], sso: false, scim: false),
-                authorization: user.authorization ?? Authorization(roles: [], tenants: [:], ssoAppIds: []),
-                customAttributes: customAttributes)
+        return SerializedUser(
+            userId: user.userId,
+            loginIds: user.loginIds,
+            status: user.status.rawValue,
+            createdAt: user.createdAt,
+            email: user.email,
+            isVerifiedEmail: user.isVerifiedEmail,
+            phone: user.phone,
+            isVerifiedPhone: user.isVerifiedPhone,
+            name: user.name,
+            givenName: user.givenName,
+            middleName: user.middleName,
+            familyName: user.familyName,
+            picture: user.picture,
+            authentication: user.authentication,
+            authorization: user.authorization,
+            customAttributes: customAttributes,
+            isUpdateRequired: user.isUpdateRequired,
+        )
+    }
+    
+    static func deserialize(_ user: SerializedUser) -> DescopeUser {
+        var customAttributes: [String: Any] = [:]
+        if let value = user.customAttributes, let json = try? JSONSerialization.jsonObject(with: Data(value.utf8)) {
+            customAttributes = json as? [String: Any] ?? [:]
         }
+        
+        return DescopeUser(
+            userId: user.userId,
+            loginIds: user.loginIds,
+            status: Status(rawValue: user.status ?? "") ?? .enabled,
+            createdAt: user.createdAt,
+            email: user.email,
+            isVerifiedEmail: user.isVerifiedEmail,
+            phone: user.phone,
+            isVerifiedPhone: user.isVerifiedPhone,
+            name: user.name,
+            givenName: user.givenName,
+            middleName: user.middleName,
+            familyName: user.familyName,
+            picture: user.picture,
+            authentication: user.authentication ?? Authentication(passkey: false, password: false, totp: false, oauth: [], sso: false, scim: false),
+            authorization: user.authorization ?? Authorization(roles: [], ssoAppIds: []),
+            customAttributes: customAttributes,
+            isUpdateRequired: user.isUpdateRequired ?? true, // if the flag doesn't exist we've got old data without the new fields
+        )
     }
 }

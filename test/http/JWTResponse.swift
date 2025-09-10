@@ -73,9 +73,18 @@ private let userPayload = """
 {
     "userId": "userId",
     "loginIds": ["foo"],
+    "status": "enabled",
     "email": "email",
     "verifiedEmail": true,
     "createdTime": 123,
+    "roleNames": ["r1"],
+    "ssoAppIds": ["s1","s2"],
+    "webauthn": false,
+    "password": true,
+    "TOTP": false,
+    "OAuth": {"google": true},
+    "SAML": true,
+    "SCIM": false,
     "customAttributes": {}
 }
 """

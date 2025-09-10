@@ -456,6 +456,7 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         struct Fields: Decodable {
             var userId: String
             var loginIds: [String]
+            var status: String
             var createdTime: Int
             var email: String?
             var verifiedEmail: Bool?
@@ -466,6 +467,14 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
             var middleName: String?
             var familyName: String?
             var picture: String?
+            var roleNames: [String]
+            var ssoAppIds: [String]
+            var webauthn: Bool
+            var password: Bool
+            var TOTP: Bool
+            var OAuth: [String: Bool]
+            var SAML: Bool
+            var SCIM: Bool
         }
 
         var fields: Fields

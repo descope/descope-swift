@@ -13,31 +13,41 @@ extension Route {
 
 extension DescopeClient.UserResponse.Fields {
     func convert() -> DescopeUser {
-        let createdAt = Date(timeIntervalSince1970: TimeInterval(createdTime))
-        var user = DescopeUser(userId: userId, loginIds: loginIds, createdAt: createdAt, isVerifiedEmail: false, isVerifiedPhone: false)
-        if let name, !name.isEmpty {
-            user.name = name
+        var pictureURL: URL?
+        if let picture, !picture.isEmpty {
+            pictureURL = URL(string: picture)
         }
-        if let email, !email.isEmpty {
-            user.email = email
-            user.isVerifiedEmail = verifiedEmail ?? false
-        }
-        if let phone, !phone.isEmpty {
-            user.phone = phone
-            user.isVerifiedPhone = verifiedPhone ?? false
-        }
-        if let givenName, !givenName.isEmpty {
-            user.givenName = givenName
-        }
-        if let middleName, !middleName.isEmpty {
-            user.middleName = middleName
-        }
-        if let familyName, !familyName.isEmpty {
-            user.familyName = familyName
-        }
-        if let picture, let url = URL(string: picture) {
-            user.picture = url
-        }
+        
+        let user = DescopeUser(
+            userId: userId,
+            loginIds: loginIds,
+            status: DescopeUser.Status(rawValue: status) ?? .enabled,
+            createdAt: Date(timeIntervalSince1970: TimeInterval(createdTime)),
+            email: email == "" ? nil : email,
+            isVerifiedEmail: verifiedEmail ?? false,
+            phone: phone == "" ? nil : phone,
+            isVerifiedPhone: verifiedPhone ?? false,
+            name: name == "" ? nil : name,
+            givenName: givenName == "" ? nil : givenName,
+            middleName: middleName == "" ? nil : middleName,
+            familyName: familyName == "" ? nil : familyName,
+            picture: pictureURL,
+            authentication: DescopeUser.Authentication(
+                passkey: webauthn,
+                password: password,
+                totp: TOTP,
+                oauth: Set(OAuth.keys),
+                sso: SAML,
+                scim: SCIM,
+            ),
+            authorization: DescopeUser.Authorization(
+                roles: Set(roleNames),
+                ssoAppIds: Set(ssoAppIds),
+            ),
+            customAttributes: [:], // copied in UserResponse's convert
+            isUpdateRequired: false,
+        )
+        
         return user
     }
 }
