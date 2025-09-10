@@ -41,6 +41,9 @@ public struct DescopeUser: @unchecked Sendable {
     /// custom identifiers the user can authenticate with.
     public var loginIds: [String]
     
+    ///
+    public var status: Status
+    
     /// The time at which the user was created in Descope.
     public var createdAt: Date
     
@@ -78,14 +81,57 @@ public struct DescopeUser: @unchecked Sendable {
     
     /// The user's profile picture.
     public var picture: URL?
+    
+    ///
+    public var authentication: Authentication
+    
+    ///
+    public var authorization: Authorization
 
     /// A mapping of any custom attributes associated with this user. The custom attributes
     /// are managed via the Descope console.
     public var customAttributes: [String: Any]
+    
+    public var isUpdateRequired: Bool
+    
+    // Accessory types
+    
+    ///
+    public enum Status: String, Codable {
+        case invited
+        case enabled
+        case disabled
+    }
+    
+    ///
+    public struct Authentication: Codable {
+        public var passkey: Bool
+        public var password: Bool
+        public var totp: Bool
+        public var oauth: Set<String>
+        public var sso: Bool
+        public var scim: Bool
+    }
+    
+    ///
+    public struct Authorization: Codable {
+        var roles: Set<String>
+        var tenants: [String: AssociatedTenant]
+        var ssoAppIds: Set<String>
 
-    public init(userId: String, loginIds: [String], createdAt: Date, email: String? = nil, isVerifiedEmail: Bool = false, phone: String? = nil, isVerifiedPhone: Bool = false, name: String? = nil, givenName: String? = nil, middleName: String? = nil, familyName: String? = nil, picture: URL? = nil, customAttributes: [String: Any] = [:]) {
+        public struct AssociatedTenant: Codable {
+            var tenantId: String
+            var name: String
+            var roles: Set<String>
+        }
+    }
+    
+    // Initialization
+
+    public init(userId: String, loginIds: [String], status: Status, createdAt: Date, email: String? = nil, isVerifiedEmail: Bool = false, phone: String? = nil, isVerifiedPhone: Bool = false, name: String? = nil, givenName: String? = nil, middleName: String? = nil, familyName: String? = nil, picture: URL? = nil, authentication: Authentication, authorization: Authorization, customAttributes: [String: Any] = [:]) {
         self.userId = userId
         self.loginIds = loginIds
+        self.status = status
         self.createdAt = createdAt
         self.email = email
         self.isVerifiedEmail = isVerifiedEmail
@@ -97,6 +143,9 @@ public struct DescopeUser: @unchecked Sendable {
         self.familyName = familyName
         self.picture = picture
         self.customAttributes = customAttributes
+        self.authentication = authentication
+        self.authorization = authorization
+        self.isUpdateRequired = false
     }
 }
 
@@ -119,12 +168,19 @@ extension DescopeUser: CustomStringConvertible {
 extension DescopeUser: Equatable {
     public static func == (lhs: DescopeUser, rhs: DescopeUser) -> Bool {
         let attrs = lhs.customAttributes as NSDictionary
-        return lhs.userId == rhs.userId && lhs.loginIds == rhs.loginIds &&
-            lhs.createdAt == rhs.createdAt && lhs.picture == rhs.picture &&
-            lhs.email == rhs.email && lhs.isVerifiedEmail == rhs.isVerifiedEmail &&
-            lhs.phone == rhs.phone && lhs.isVerifiedPhone == rhs.isVerifiedPhone &&
-            lhs.name == rhs.name && lhs.givenName == rhs.givenName &&
-            lhs.middleName == rhs.middleName && lhs.familyName == rhs.familyName &&
+        return lhs.userId == rhs.userId &&
+            lhs.loginIds == rhs.loginIds &&
+            lhs.status == rhs.status &&
+            lhs.createdAt == rhs.createdAt &&
+            lhs.picture == rhs.picture &&
+            lhs.email == rhs.email &&
+            lhs.isVerifiedEmail == rhs.isVerifiedEmail &&
+            lhs.phone == rhs.phone &&
+            lhs.isVerifiedPhone == rhs.isVerifiedPhone &&
+            lhs.name == rhs.name &&
+            lhs.givenName == rhs.givenName &&
+            lhs.middleName == rhs.middleName &&
+            lhs.familyName == rhs.familyName &&
             attrs.isEqual(to: rhs.customAttributes)
     }
 }
@@ -133,13 +189,27 @@ extension DescopeUser: Equatable {
 // to Codable because the customAttributes dictionary isn't serializable
 extension DescopeUser: Codable {
     enum CodingKeys: CodingKey {
-        case userId, loginIds, createdAt, email, isVerifiedEmail, phone, isVerifiedPhone, name, givenName, middleName, familyName, picture, customAttributes
+        case userId
+        case loginIds
+        case status
+        case createdAt
+        case email
+        case isVerifiedEmail
+        case phone
+        case isVerifiedPhone
+        case name
+        case givenName
+        case middleName
+        case familyName
+        case picture
+        case customAttributes
     }
 
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         userId = try values.decode(String.self, forKey: .userId)
         loginIds = try values.decode([String].self, forKey: .loginIds)
+        status = try values.decodeIfPresent(Status.self, forKey: .status) ?? .enabled
         createdAt = try values.decode(Date.self, forKey: .createdAt)
         email = try values.decodeIfPresent(String.self, forKey: .email)
         isVerifiedEmail = try values.decode(Bool.self, forKey: .isVerifiedEmail)
@@ -161,6 +231,7 @@ extension DescopeUser: Codable {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(userId, forKey: .userId)
         try values.encode(loginIds, forKey: .loginIds)
+        try values.encode(status, forKey: .status)
         try values.encode(createdAt, forKey: .createdAt)
         try values.encodeIfPresent(email, forKey: .email)
         try values.encode(isVerifiedEmail, forKey: .isVerifiedEmail)

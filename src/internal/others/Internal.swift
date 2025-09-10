@@ -205,3 +205,74 @@ extension AuthenticationResponse: Codable {
         try values.encode(isFirstAuthentication, forKey: .isFirstAuthentication)
     }
 }
+
+extension DescopeUser {
+    struct SerializedUser: Codable {
+        var userId: String
+        var loginIds: [String]
+        var status: Status?
+        var createdAt: Date
+        var email: String?
+        var isVerifiedEmail: Bool
+        var phone: String?
+        var isVerifiedPhone: Bool
+        var name: String?
+        var givenName: String?
+        var middleName: String?
+        var familyName: String?
+        var picture: URL?
+        var authentication: Authentication?
+        var authorization: Authorization?
+        var customAttributes: String?
+        
+        static func serialize(_ user: DescopeUser) -> SerializedUser {
+            var customAttributes = "{}"
+            if JSONSerialization.isValidJSONObject(customAttributes), let data = try? JSONSerialization.data(withJSONObject: customAttributes), let value = String(bytes: data, encoding: .utf8) {
+                customAttributes = value
+            }
+            
+            return SerializedUser(
+                userId: user.userId,
+                loginIds: user.loginIds,
+                status: user.status,
+                createdAt: user.createdAt,
+                email: user.email,
+                isVerifiedEmail: user.isVerifiedEmail,
+                phone: user.phone,
+                isVerifiedPhone: user.isVerifiedPhone,
+                name: user.name,
+                givenName: user.givenName,
+                middleName: user.middleName,
+                familyName: user.familyName,
+                picture: user.picture,
+                authentication: user.authentication,
+                authorization: user.authorization,
+                customAttributes: customAttributes)
+        }
+        
+        static func deserialize(_ user: SerializedUser) -> DescopeUser {
+            var customAttributes: [String: Any] = [:]
+            if let value = user.customAttributes, let json = try? JSONSerialization.jsonObject(with: Data(value.utf8)) {
+                customAttributes = json as? [String: Any] ?? [:]
+            }
+            
+            return DescopeUser(
+                userId: user.userId,
+                loginIds: user.loginIds,
+                status: user.status ?? .enabled,
+                createdAt: user.createdAt,
+                email: user.email,
+                isVerifiedEmail: user.isVerifiedEmail,
+                phone: user.phone,
+                isVerifiedPhone: user.isVerifiedPhone,
+                name: user.name,
+                givenName: user.givenName,
+                middleName: user.middleName,
+                familyName: user.familyName,
+                picture: user.picture,
+                authentication: user.authentication ?? Authentication(passkey: false, password: false, totp: false, oauth: [], sso: false, scim: false),
+                authorization: user.authorization ?? Authorization(roles: [], tenants: [:], ssoAppIds: []),
+                customAttributes: customAttributes)
+        }
+    }
+}
