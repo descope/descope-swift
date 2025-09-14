@@ -41,7 +41,7 @@ public struct DescopeUser: @unchecked Sendable {
     /// custom identifiers the user can authenticate with.
     public var loginIds: [String]
     
-    ///
+    /// The current status of the user.
     public var status: Status
     
     /// The time at which the user was created in Descope.
@@ -82,43 +82,69 @@ public struct DescopeUser: @unchecked Sendable {
     /// The user's profile picture.
     public var picture: URL?
     
-    ///
+    /// Details about the authentication methods the user has set up.
     public var authentication: Authentication
     
-    ///
+    /// Details about the authorization settings for this user.
     public var authorization: Authorization
 
     /// A mapping of any custom attributes associated with this user. The custom attributes
     /// are managed via the Descope console.
     public var customAttributes: [String: Any]
     
-    //
+    // Data Consistency
     
-    /// 
+    /// This flag indicates that the ``DescopeUser`` of the signed in user was saved by an older
+    /// version of the Descope SDK, and some fields that were added to the ``DescopeUser`` class
+    /// might show empty values (`false`, `nil`, etc) as placeholders, until the user is loaded
+    /// from the server again.
+    ///
+    /// The scenario described above can happen when deploying an app update with a new version of
+    /// the Descope SDK, in which case it's recommended to call `Descope.auth.me()` to update the
+    /// user data, after which this flag will become `false`.
     public var isUpdateRequired: Bool
     
     // Accessory types
     
-    ///
+    /// The current status of the user.
     public enum Status: String, Sendable, Codable {
+        /// An invitation was sent to this user and they'll become enabled after signing in once.
         case invited
+        
+        /// The user is enabled and can sign in.
         case enabled
+        
+        /// The user is disabled and cannot sign in normally.
         case disabled
     }
     
-    ///
+    /// Details about the authentication methods the user has set up.
     public struct Authentication: Sendable, Codable, Equatable {
+        /// Whether the user has passkey (WebAuthn) authentication set up.
         public var passkey: Bool
+        
+        /// Whether the user has a password set up.
         public var password: Bool
+        
+        /// Whether the user has TOTP (authenticator app) set up.
         public var totp: Bool
+        
+        /// The OAuth providers the user has used to sign in. Can be empty.
         public var oauth: Set<String>
+        
+        /// Whether the user has SSO set up.
         public var sso: Bool
+        
+        /// Whether SCIM provisioning is enabled for this user.
         public var scim: Bool
     }
     
-    ///
+    /// Details about the authorization settings for this user.
     public struct Authorization: Sendable, Codable, Equatable {
+        /// The names of the roles assigned to this user. Can be empty.
         var roles: Set<String>
+        
+        /// The IDs of the SSO Apps assigned to this user. Can be empty.
         var ssoAppIds: Set<String>
     }
     
