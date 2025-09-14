@@ -92,6 +92,9 @@ public struct DescopeUser: @unchecked Sendable {
     /// are managed via the Descope console.
     public var customAttributes: [String: Any]
     
+    //
+    
+    /// 
     public var isUpdateRequired: Bool
     
     // Accessory types
