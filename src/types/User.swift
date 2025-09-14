@@ -137,15 +137,29 @@ public struct DescopeUser: @unchecked Sendable {
         
         /// Whether SCIM provisioning is enabled for this user.
         public var scim: Bool
+        
+        public init(passkey: Bool, password: Bool, totp: Bool, oauth: Set<String>, sso: Bool, scim: Bool) {
+            self.passkey = passkey
+            self.password = password
+            self.totp = totp
+            self.oauth = oauth
+            self.sso = sso
+            self.scim = scim
+        }
     }
     
     /// Details about the authorization settings for this user.
     public struct Authorization: Sendable, Codable, Equatable {
         /// The names of the roles assigned to this user. Can be empty.
-        var roles: Set<String>
+        public var roles: Set<String>
         
         /// The IDs of the SSO Apps assigned to this user. Can be empty.
-        var ssoAppIds: Set<String>
+        public var ssoAppIds: Set<String>
+        
+        public init(roles: Set<String>, ssoAppIds: Set<String>) {
+            self.roles = roles
+            self.ssoAppIds = ssoAppIds
+        }
     }
     
     // Initialization
