@@ -427,6 +427,7 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         var refreshJwt: String?
         var user: UserResponse?
         var firstSeen: Bool
+        var cookieDomain: String?
         
         mutating func setValues(from data: Data, response: HTTPURLResponse) throws {
             guard let url = response.url, let fields = response.allHeaderFields as? [String: String] else { return }
