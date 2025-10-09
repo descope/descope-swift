@@ -97,9 +97,18 @@ class TestAuth: XCTestCase {
 
     func checkUser(_ user: DescopeUser) throws {
         XCTAssertEqual("userId", user.userId)
-        XCTAssertFalse(user.isVerifiedPhone)
+        XCTAssertEqual("email", user.email)
         XCTAssertTrue(user.isVerifiedEmail)
+        XCTAssertNil(user.phone)
+        XCTAssertFalse(user.isVerifiedPhone)
+        XCTAssertEqual("name", user.name)
         XCTAssertNil(user.givenName)
+        XCTAssertEqual(Set(["google"]), user.authentication.oauth)
+        XCTAssertTrue(user.authentication.password)
+        XCTAssertFalse(user.authentication.passkey)
+        XCTAssertFalse(user.authentication.totp)
+        XCTAssertEqual(Set(["r1"]), user.authorization.roles)
+        XCTAssertEqual(Set(["s1","s2"]), user.authorization.ssoAppIds)
 
         try checkCustomAttributes(user.customAttributes)
     }
@@ -161,14 +170,23 @@ private let userPayload = """
 {
     "userId": "userId",
     "loginIds": ["loginId"],
+    "status": "enabled",
     "name": "name",
     "picture": "picture",
     "email": "email",
     "verifiedEmail": true,
-    "phone": "phone",
+    "phone": "",
     "createdTime": 123,
     "middleName": "middleName",
     "familyName": "familyName",
+    "roleNames": ["r1"],
+    "ssoAppIds": ["s1","s2"],
+    "webauthn": false,
+    "password": true,
+    "TOTP": false,
+    "OAuth": {"google": true},
+    "SAML": true,
+    "SCIM": false,
     "customAttributes": \(attributesPayload)
 }
 """

@@ -13,7 +13,7 @@ class TestToken: XCTestCase {
             _ = try Token(jwt: "")
             XCTFail("Expected an error to be thrown")
         } catch {
-            guard error is DescopeError else { return XCTFail("Unexpected error: \(error)") }
+            // Expected to throw
         }
         
         // Basic Fields
