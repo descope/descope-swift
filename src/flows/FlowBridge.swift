@@ -548,7 +548,7 @@ window.descopeBridge = {
             } else {
                 window.webkit.messageHandlers.\(FlowBridgeMessage.ready.rawValue).postMessage(tag)
             }
-            this.disableTouchInteractions()   
+            this.disableTouchInteractions()
         },
 
         disableTouchInteractions() {
