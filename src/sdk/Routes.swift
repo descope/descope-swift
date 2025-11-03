@@ -480,9 +480,9 @@ public protocol DescopeEnchantedLink: Sendable {
 
 
 public protocol DescopePush: Sendable {
-    func enroll(token: String, development: Bool, refreshJwt: String) async throws
+    func enroll(token: String, development: Bool, refreshJwt: String) async throws(DescopeError)
     
-    func finish(transactionId: String, result: String, refreshJwt: String) async throws
+    func finish(transactionId: String, approved: Bool, refreshJwt: String) async throws(DescopeError)
 }
 
 

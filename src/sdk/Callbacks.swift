@@ -968,9 +968,9 @@ public extension DescopePassword {
 }
 
 public extension DescopePush {
-    func enroll(token: String, development: Bool, refreshJwt: String, completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+    func enroll(token: String, development: Bool, refreshJwt: String, completion: @escaping @Sendable (Result<Void, DescopeError>) -> Void) {
         Task {
-            do {
+            do throws(DescopeError) {
                 completion(.success(try await enroll(token: token, development: development, refreshJwt: refreshJwt)))
             } catch {
                 completion(.failure(error))
@@ -978,10 +978,10 @@ public extension DescopePush {
         }
     }
 
-    func finish(transactionId: String, result: String, refreshJwt: String, completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+    func finish(transactionId: String, approved: Bool, refreshJwt: String, completion: @escaping @Sendable (Result<Void, DescopeError>) -> Void) {
         Task {
-            do {
-                completion(.success(try await finish(transactionId: transactionId, result: result, refreshJwt: refreshJwt)))
+            do throws(DescopeError) {
+                completion(.success(try await finish(transactionId: transactionId, approved: approved, refreshJwt: refreshJwt)))
             } catch {
                 completion(.failure(error))
             }

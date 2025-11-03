@@ -299,7 +299,7 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
     
     // MARK: - Push
     
-    func pushEnrollDevice(provider: String, token: String, device: String, refreshJwt: String) async throws {
+    func pushEnrollDevice(provider: String, token: String, device: String, refreshJwt: String) async throws(DescopeError) {
         try await post("auth/push/update", headers: authorization(with: refreshJwt), body: [
             "provider": provider,
             "token": token,
@@ -307,10 +307,10 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         ])
     }
     
-    func pushSignInFinish(transactionId: String, result: String, refreshJwt: String) async throws {
+    func pushSignInFinish(transactionId: String, approved: Bool, refreshJwt: String) async throws(DescopeError) {
         try await post("auth/push/signin/finish", headers: authorization(with: refreshJwt), body: [
             "transactionId": transactionId,
-            "result": result,
+            "result": approved ? "approved" : "denied",
         ])
     }
     
