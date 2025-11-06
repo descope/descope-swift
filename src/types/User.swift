@@ -236,5 +236,5 @@ extension DescopeUser {
     ///
     /// You can check if a ``DescopeSession`` has a valid ``DescopeSession/user`` field by checking
     /// if the ``isUpdateRequired`` property is `true`.
-    public static let placeholder = DescopeUser(userId: "", loginIds: [], status: .enabled, createdAt: Date(timeIntervalSince1970: 0), email: nil, isVerifiedEmail: false, phone: nil, isVerifiedPhone: false, name: nil, givenName: nil, middleName: nil, familyName: nil, picture: nil, authentication: Authentication(passkey: false, password: false, totp: false, oauth: [], sso: false, scim: false), authorization: Authorization(roles: [], ssoAppIds: []), customAttributes: [:], isUpdateRequired: true)
+    public static let placeholder = DescopeUser(userId: "", loginIds: [], status: .enabled, createdAt: Date(timeIntervalSince1970: 0), email: nil, isVerifiedEmail: false, phone: nil, isVerifiedPhone: false, name: nil, givenName: nil, middleName: nil, familyName: nil, picture: nil, authentication: .placeholder, authorization: .placeholder, customAttributes: [:], isUpdateRequired: true)
 }
