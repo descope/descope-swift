@@ -235,6 +235,6 @@ extension DescopeUser {
     /// update your session by calling ``DescopeSession/updateUser(with:)``.
     ///
     /// You can check if a ``DescopeSession`` has a valid ``DescopeSession/user`` field by checking
-    /// if the ``isUpdateRequired`` property is `true`.
+    /// if the ``isUpdateRequired`` property is `false`.
     public static let placeholder = DescopeUser(userId: "", loginIds: [], status: .enabled, createdAt: Date(timeIntervalSince1970: 0), email: nil, isVerifiedEmail: false, phone: nil, isVerifiedPhone: false, name: nil, givenName: nil, middleName: nil, familyName: nil, picture: nil, authentication: .placeholder, authorization: .placeholder, customAttributes: [:], isUpdateRequired: true)
 }
