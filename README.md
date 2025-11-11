@@ -289,7 +289,7 @@ do {
     let session = DescopeSession(from: authResponse)
     Descope.sessionManager.manageSession(session)
     showHomeScreen() 
-} catch DescopeError.oauthNativeCancelled {
+} catch .oauthNativeCancelled {
     showLoading(false)
     print("Authentication cancelled")
 } catch {
@@ -388,7 +388,7 @@ do {
     let session = DescopeSession(from: authResponse)
     Descope.sessionManager.manageSession(session)
     showHomeScreen() 
-} catch DescopeError.oauthNativeCancelled {
+} catch .oauthNativeCancelled {
     showLoading(false)
     print("Authentication cancelled")
 } catch {
