@@ -459,6 +459,7 @@ window.descopeBridge = {
         appName: \(SystemInfo.appName?.javaScriptLiteralString() ?? "''"),
         appVersion: \(SystemInfo.appVersion?.javaScriptLiteralString() ?? "''"), 
         device: \(SystemInfo.device?.javaScriptLiteralString() ?? "''"),
+        webauthn: true,
     },
 
     abortFlow(reason) {
@@ -557,6 +558,8 @@ window.descopeBridge = {
             console.debug(`Descope ${headers['x-descope-sdk-name'] || 'unknown'} package version "${headers['x-descope-sdk-version'] || 'unknown'}"`)
 
             const hostInfo = window.descopeBridge.hostInfo
+            headers['x-descope-bridge-name'] = hostInfo.sdkName
+            headers['x-descope-bridge-version'] = hostInfo.sdkVersion
             headers['x-descope-platform-name'] = hostInfo.platformName
             headers['x-descope-platform-version'] = hostInfo.platformVersion
             if (hostInfo.appName) {
