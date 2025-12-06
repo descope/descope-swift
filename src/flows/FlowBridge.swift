@@ -532,7 +532,7 @@ window.descopeBridge = {
             })
 
             this.component.addEventListener('success', (event) => {
-                const response = event.detail ? JSON.stringify(event.detail) : ''
+                const response = (event.detail && Object.keys(event.detail).length) ? JSON.stringify(event.detail) : ''
                 window.webkit.messageHandlers.\(FlowBridgeMessage.success.rawValue).postMessage(response)
             })
 
