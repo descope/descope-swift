@@ -150,7 +150,7 @@ function. See its documentation for more details.
 
 ## Session Storage
 
-DescopeKit uses a pluggable session storage system defiend by `DescopeSessionStorage`. By default, authenticated sessions are stored securely in the system keychain and automatically restored when the application restarts.
+DescopeKit uses a pluggable session storage system defined by `DescopeSessionStorage`. By default, authenticated sessions are stored securely in the system keychain and automatically restored when the application restarts.
 
 ## Customizing Keychain Storage
 
