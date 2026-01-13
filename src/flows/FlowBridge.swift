@@ -186,7 +186,15 @@ extension FlowBridge {
             if tag == "fail" {
                 logger.error("Bridge encountered script error in webpage", message)
             } else if logger.isUnsafeEnabled {
-                logger.debug("Webview console.\(tag): \(message)")
+                let logMessage = "Webview console.\(tag): \(message)"
+                switch (tag) {
+                case "error":
+                    logger.error(logMessage)
+                case "warn", "info", "log":
+                    logger.info(logMessage)
+                default:
+                    logger.debug(logMessage)
+                }
             }
         case .found:
             logger.info("Bridge received found event")
@@ -439,11 +447,11 @@ private struct FlowNativeOptions: Encodable {
 private let loggingScript = """
 
 window.onerror = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'fail', message: s }) }
-window.console.error = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'error', message: s }) }
-window.console.warn = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'warn', message: s }) }
-window.console.info = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'info', message: s }) }
-window.console.debug = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'debug', message: s }) }
-window.console.log = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'log', message: s }) }
+window.console.error = (...args) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'error', message: args.map(String).join(' ') }) }
+window.console.warn = (...args) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'warn', message: args.map(String).join(' ') }) }
+window.console.info = (...args) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'info', message: args.map(String).join(' ') }) }
+window.console.debug = (...args) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'debug', message: args.map(String).join(' ') }) }
+window.console.log = (...args) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'log', message: args.map(String).join(' ') }) }
 
 """
 
