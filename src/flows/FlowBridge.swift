@@ -446,12 +446,21 @@ private struct FlowNativeOptions: Encodable {
 /// Redirects errors and console logs to the bridge
 private let loggingScript = """
 
-window.onerror = (s) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'fail', message: s }) }
-window.console.error = (...args) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'error', message: args.map(String).join(' ') }) }
-window.console.warn = (...args) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'warn', message: args.map(String).join(' ') }) }
-window.console.info = (...args) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'info', message: args.map(String).join(' ') }) }
-window.console.debug = (...args) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'debug', message: args.map(String).join(' ') }) }
-window.console.log = (...args) => { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'log', message: args.map(String).join(' ') }) }
+(function() {
+    function stringify(args) {
+        return Array.from(args).map(arg => {
+            if (!arg) return ""
+            if (typeof arg === 'string') return arg
+            return JSON.stringify(arg)
+        }).join(' ')
+    }
+    window.onerror = function() { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'fail', message: stringify(arguments) }) };
+    window.console.error = function() { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'error', message: stringify(arguments) }) };
+    window.console.warn = function() { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'warn', message: stringify(arguments) }) };
+    window.console.info = function() { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'info', message: stringify(arguments) }) };
+    window.console.debug = function() { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'debug', message: stringify(arguments) }) };
+    window.console.log = function() { window.webkit.messageHandlers.\(FlowBridgeMessage.log.rawValue).postMessage({ tag: 'log', message: stringify(arguments) }) };
+})();
 
 """
 
