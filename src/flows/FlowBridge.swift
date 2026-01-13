@@ -187,7 +187,7 @@ extension FlowBridge {
                 logger.error("Bridge encountered script error in webpage", message)
             } else if logger.isUnsafeEnabled {
                 let logMessage = "Webview console.\(tag): \(message)"
-                switch (tag) {
+                switch tag {
                 case "error":
                     logger.error(logMessage)
                 case "warn", "info", "log":
