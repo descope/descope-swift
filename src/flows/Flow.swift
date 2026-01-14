@@ -170,3 +170,20 @@ extension DescopeFlow: CustomStringConvertible {
         return "DescopeFlow(url: \"\(url)\")"
     }
 }
+
+/// Convenience constructor when use Descope's Flow hosting service
+extension DescopeFlow {
+    /// Creates a new ``DescopeFlow`` object that encapsulates a single flow run.
+    ///
+    /// - Important: This method of constructing a ``DescopeFlow`` is only applicable when using Descope's Flow hosting service.
+    ///     If you host your own flows, use the default constructor instead.
+    ///
+    /// - Parameter flowId: The ID of the flow
+    /// - Parameter descopeSDK: An optional ``DescopeSDK`` to use instead of the the ``Descope`` singleton.
+    public convenience init(flowId: String, descopeSDK: DescopeSDK? = nil) throws(DescopeError) {
+        let sdk = descopeSDK ?? Descope.sdk
+        guard sdk.config.projectId != "" else { throw DescopeError.flowSetup.with(message: "The Descope SDK must be initialized before use") }
+        let url = "\(sdk.client.baseURL)/login/\(sdk.client.config.projectId)?mobile=true&flow=\(flowId)"
+        self.init(url: url)
+    }
+}

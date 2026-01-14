@@ -90,6 +90,7 @@ extension DescopeError {
 
     public static let flowFailed = DescopeError.sdkError("S100001", "Flow failed to run")
     public static let flowCancelled = DescopeError.sdkError("S100002", "Flow cancelled")
+    public static let flowSetup = DescopeError.sdkError("S100003", "Flow setup failed")
     
     public static let passkeyFailed = DescopeError.sdkError("S110001", "Passkey authentication failed")
     public static let passkeyCancelled = DescopeError.sdkError("S110002", "Passkey authentication cancelled")
