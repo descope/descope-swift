@@ -179,7 +179,7 @@ extension DescopeFlow {
     ///     If you host your own flows, use the default constructor instead.
     ///
     /// - Parameter flowId: The ID of the flow
-    /// - Parameter descopeSDK: An optional ``DescopeSDK`` to use instead of the the ``Descope`` singleton.
+    /// - Parameter descopeSDK: An optional ``DescopeSDK`` to use instead of the ``Descope`` singleton.
     public convenience init(flowId: String, descopeSDK: DescopeSDK? = nil) throws(DescopeError) {
         let sdk = descopeSDK ?? Descope.sdk
         guard sdk.config.projectId != "" else { throw DescopeError.flowSetup.with(message: "The Descope SDK must be initialized before use") }
