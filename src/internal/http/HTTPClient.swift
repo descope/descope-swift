@@ -16,12 +16,12 @@ class HTTPClient {
 
     final func get<T: JSONResponse>(_ route: String, headers: [String: String] = [:], params: [String: String?] = [:]) async throws(DescopeError) -> T {
         let (data, response) = try await get(route, headers: headers, params: params)
-        return try decodeJSON(data: data, response: response)
+        return try decodeJSONResponse(data: data, response: response)
     }
     
     final func post<T: JSONResponse>(_ route: String, headers: [String: String] = [:], params: [String: String?] = [:], body: [String: Any?] = [:]) async throws(DescopeError) -> T {
         let (data, response) = try await post(route, headers: headers, params: params, body: body)
-        return try decodeJSON(data: data, response: response)
+        return try decodeJSONResponse(data: data, response: response)
     }
     
     // Convenience data functions
@@ -52,6 +52,16 @@ class HTTPClient {
     
     func errorForResponseData(_ data: Data) -> DescopeError? {
         return nil
+    }
+
+    func decodeJSONResponse<T: JSONResponse>(data: Data, response: HTTPURLResponse) throws(DescopeError) -> T {
+        do {
+            var val = try JSONDecoder().decode(T.self, from: data)
+            try val.setValues(from: data, response: response)
+            return val
+        } catch {
+            throw DescopeError.decodeError.with(cause: error)
+        }
     }
     
     // Private
@@ -143,16 +153,6 @@ protocol JSONResponse: Decodable {
 extension JSONResponse {
     mutating func setValues(from data: Data, response: HTTPURLResponse) throws {
         // nothing by default
-    }
-}
-
-private func decodeJSON<T: JSONResponse>(data: Data, response: HTTPURLResponse) throws(DescopeError) -> T {
-    do {
-        var val = try JSONDecoder().decode(T.self, from: data)
-        try val.setValues(from: data, response: response)
-        return val
-    } catch {
-        throw DescopeError.decodeError.with(cause: error)
     }
 }
 

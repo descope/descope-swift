@@ -36,6 +36,15 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions lau
 }
 ```
 
+> **Custom cookie names:** If your project uses different cookie names for session and refresh tokens (instead of the defaults `DS` and `DSR`), configure them when setting up the SDK:
+>
+> ```swift
+> Descope.setup(projectId: "<Your-Project-Id>") { config in
+>     config.sessionCookieName = "DS_CUSTOM"
+>     config.refreshCookieName = "DSR_CUSTOM"
+> }
+> ```
+
 You can authenticate a user in your application by starting one of the
 authentication methods. For example, let's use OTP via email: 
 

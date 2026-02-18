@@ -26,6 +26,7 @@ enum FlowBridgeResponse {
 }
 
 struct FlowBridgeAttributes: Decodable {
+    var sessionCookieName: String?
     var refreshCookieName: String?
 }
 
@@ -157,12 +158,14 @@ extension FlowBridge {
             }
         }
         
-        call(function: "initialize", params: nativeOptions.payload, refreshJwt, clientInputs)
+        let refreshCookieName = attributes.refreshCookieName ?? flow.descope?.config.refreshCookieName ?? DescopeClient.refreshCookieName
+        call(function: "initialize", params: nativeOptions.payload, refreshJwt, clientInputs, refreshCookieName)
     }
 
     /// Called by the coordinator when it needs to update the refresh token in the page.
-    func updateRefreshJwt(_ refreshJwt: String) {
-        call(function: "updateRefreshJwt", params: refreshJwt)
+    func updateRefreshJwt(_ refreshJwt: String, refreshCookieName: String? = nil) {
+        let effectiveName = refreshCookieName ?? attributes.refreshCookieName ?? flow?.descope?.config.refreshCookieName ?? DescopeClient.refreshCookieName
+        call(function: "updateRefreshJwt", params: refreshJwt, effectiveName)
     }
 
     /// Called by the coordinator when it's done handling a bridge request
@@ -199,6 +202,7 @@ extension FlowBridge {
         case .found:
             logger.info("Bridge received found event")
             guard let json = message.body as? [String: Any] else { return }
+            attributes.sessionCookieName = json["sessionCookieName"] as? String
             attributes.refreshCookieName = json["refreshCookieName"] as? String
             initialize()
         case .ready:
@@ -515,6 +519,7 @@ window.descopeBridge = {
             }
 
             const attributes = {
+                sessionCookieName: this.component.sessionCookieName || null,
                 refreshCookieName: this.component.refreshCookieName || null,
             }
 
@@ -522,12 +527,12 @@ window.descopeBridge = {
             return true
         },
 
-        initialize(nativeOptions, refreshJwt, clientInputs) {
+        initialize(nativeOptions, refreshJwt, clientInputs, refreshCookieName) {
             // update webpage sdk headers and print sdk type and version to native log
             this.updateConfigHeaders()
 
             this.component.nativeOptions = JSON.parse(nativeOptions)
-            this.updateRefreshJwt(refreshJwt)
+            this.updateRefreshJwt(refreshJwt, refreshCookieName)
             this.updateClientInputs(clientInputs)
             
             if (this.component.flowStatus === 'error') {
@@ -609,10 +614,11 @@ window.descopeBridge = {
             })
         },
 
-        updateRefreshJwt(refreshJwt) {
+        updateRefreshJwt(refreshJwt, refreshCookieName) {
             if (refreshJwt) {
                 const storagePrefix = this.component.storagePrefix || ''
-                const storageKey = `${storagePrefix}\(DescopeClient.refreshCookieName)`
+                const name = refreshCookieName || this.component.refreshCookieName || '\(DescopeClient.refreshCookieName)'
+                const storageKey = `${storagePrefix}${name}`
                 window.localStorage.setItem(storageKey, refreshJwt)
             }
         },

@@ -227,7 +227,8 @@ public class DescopeFlowCoordinator {
 
     private func updateRefreshJwt() {
         guard let session = flow?.providedSession else { return }
-        bridge.updateRefreshJwt(session.refreshJwt)
+        let refreshCookieName = bridge.attributes.refreshCookieName ?? sdk.config.refreshCookieName ?? DescopeClient.refreshCookieName
+        bridge.updateRefreshJwt(session.refreshJwt, refreshCookieName: refreshCookieName)
     }
 
     // Resume
@@ -325,7 +326,9 @@ public class DescopeFlowCoordinator {
             guard let webView else { return nil }
             var jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
             let cookies = await webView.configuration.websiteDataStore.httpCookieStore.cookies(for: jwtResponse.cookieDomain, at: webView.url)
-            try jwtResponse.setValues(from: data, cookies: cookies, refreshCookieName: bridge.attributes.refreshCookieName)
+            let sessionCookieName = bridge.attributes.sessionCookieName ?? sdk.config.sessionCookieName
+            let refreshCookieName = bridge.attributes.refreshCookieName ?? sdk.config.refreshCookieName
+            try jwtResponse.setValues(from: data, cookies: cookies, sessionCookieName: sessionCookieName, refreshCookieName: refreshCookieName)
             return try jwtResponse.convert()
         } catch {
             logger.error("Unexpected error parsing authentication response", error, String(bytes: data, encoding: .utf8))

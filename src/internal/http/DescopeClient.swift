@@ -9,6 +9,26 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         let baseURL = config.baseURL ?? baseURLForProjectId(config.projectId)
         super.init(baseURL: baseURL, logger: config.logger, networkClient: config.networkClient)
     }
+
+    override func decodeJSONResponse<T: JSONResponse>(data: Data, response: HTTPURLResponse) throws(DescopeError) -> T {
+        do {
+            var val = try JSONDecoder().decode(T.self, from: data)
+            if var jwtResponse = val as? JWTResponse {
+                guard let url = response.url, let fields = response.allHeaderFields as? [String: String] else {
+                    try val.setValues(from: data, response: response)
+                    return val
+                }
+                let cookies = HTTPCookie.cookies(withResponseHeaderFields: fields, for: url)
+                try jwtResponse.setValues(from: data, cookies: cookies, sessionCookieName: config.sessionCookieName, refreshCookieName: config.refreshCookieName)
+                return jwtResponse as! T
+            } else {
+                try val.setValues(from: data, response: response)
+                return val
+            }
+        } catch {
+            throw DescopeError.decodeError.with(cause: error)
+        }
+    }
     
     // MARK: - OTP
     
@@ -432,22 +452,24 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         mutating func setValues(from data: Data, response: HTTPURLResponse) throws {
             guard let url = response.url, let fields = response.allHeaderFields as? [String: String] else { return }
             let cookies = HTTPCookie.cookies(withResponseHeaderFields: fields, for: url)
-            try setValues(from: data, cookies: cookies, refreshCookieName: nil)
+            try setValues(from: data, cookies: cookies, sessionCookieName: nil, refreshCookieName: nil)
         }
 
         // The UserResponse decoding takes care of all fields except customAttributes,
         // and we also extract JWTs from the response or webpage cookies if the project
         // is configured to not return them in the response
-        mutating func setValues(from data: Data, cookies: [HTTPCookie], refreshCookieName: String?) throws {
+        mutating func setValues(from data: Data, cookies: [HTTPCookie], sessionCookieName: String? = nil, refreshCookieName: String? = nil) throws {
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
             if let dict = json["user"] as? [String: Any] {
                 user?.setCustomAttributes(from: dict)
             }
+            let effectiveSessionName = sessionCookieName ?? DescopeClient.sessionCookieName
+            let effectiveRefreshName = refreshCookieName ?? DescopeClient.refreshCookieName
             if sessionJwt == nil || sessionJwt == "" {
-                sessionJwt = findTokenCookie(named: sessionCookieName, in: cookies)
+                sessionJwt = findTokenCookie(named: effectiveSessionName, in: cookies)
             }
             if refreshJwt == nil || refreshJwt == "" {
-                refreshJwt = findTokenCookie(named: refreshCookieName ?? DescopeClient.refreshCookieName, in: cookies)
+                refreshJwt = findTokenCookie(named: effectiveRefreshName, in: cookies)
             }
         }
     }
