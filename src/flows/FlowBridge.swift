@@ -455,11 +455,11 @@ private struct FlowNativeOptions: Encodable {
 }
 
 private extension WKNavigation {
-    private static var ids: [String: Int] = [:]
+    private static var ids: [ObjectIdentifier: Int] = [:]
     private static var next: Int = 0
     
     var id: Int {
-        let key = String(format: "%p", self)
+        let key = ObjectIdentifier(self)
         if let id = WKNavigation.ids[key] {
             return id
         }
