@@ -21,7 +21,7 @@ dependencies and you can `import DescopeKit` in your code.
 Note that the Descope SDK supports projects with a deployment target of iOS 13
 and above and macOS 12 and above.
 
-## Quickstart 
+## Quickstart
 
 A Descope `Project ID` is required to initialize the SDK. Find it
 on the [project page](https://app.descope.com/settings/project) in
@@ -36,18 +36,27 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions lau
 }
 ```
 
+> **Custom cookie names:** If your project uses [different cookie names](https://docs.descope.com/flows/actions/end-action#refresh-cookie-name) for session and refresh tokens (instead of the defaults `DS` and `DSR`), configure them when setting up the SDK:
+>
+> ```swift
+> Descope.setup(projectId: "<Your-Project-Id>") { config in
+>     config.sessionCookieName = "DS_CUSTOM"
+>     config.refreshCookieName = "DSR_CUSTOM"
+> }
+> ```
+
 You can authenticate a user in your application by starting one of the
-authentication methods. For example, let's use OTP via email: 
+authentication methods. For example, let's use OTP via email:
 
 ```swift
 // sends an OTP code to the given email address
 try await Descope.otp.signUp(with: .email, loginId: "andy@example.com", details: nil)
 ```
 
-We finish the authentication by verifying the OTP code the user entered: 
+We finish the authentication by verifying the OTP code the user entered:
 
 ```swift
-// if the user entered the right code the authentication is successful  
+// if the user entered the right code the authentication is successful
 let authResponse = try await Descope.otp.verify(with: .email, loginId: "andy@example.com", code: code)
 
 // we create a DescopeSession object that represents an authenticated user session
@@ -64,7 +73,7 @@ there's a logged in user to decide which screen to show:
 
 ```swift
 func initialViewController() -> UIViewController {
-    // check if we have a valid session from a previous launch and that it hasn't expired yet 
+    // check if we have a valid session from a previous launch and that it hasn't expired yet
     if let session = Descope.sessionManager.session, !session.refreshToken.isExpired {
         print("Authenticated user found: \(session.user)")
         return MainViewController()
@@ -150,7 +159,7 @@ function. See its documentation for more details.
 
 ## Flows
 
-We can authenticate users by building and running Flows. Flows are built in the Descope 
+We can authenticate users by building and running Flows. Flows are built in the Descope
 [flow editor](https://app.descope.com/flows). The editor allows you to easily define both
 the behavior and the UI that take the user through their authentication journey. Read more
 about it in the Descope [getting started](https://docs.descope.com/build/guides/gettingstarted/)
@@ -288,7 +297,7 @@ do {
     let authResponse = try await Descope.oauth.native(provider: .apple, options: [])
     let session = DescopeSession(from: authResponse)
     Descope.sessionManager.manageSession(session)
-    showHomeScreen() 
+    showHomeScreen()
 } catch .oauthNativeCancelled {
     showLoading(false)
     print("Authentication cancelled")
@@ -322,7 +331,7 @@ let session = ASWebAuthenticationSession(url: authURL, callbackURLScheme: "examp
     guard let url = callbackURL else { return }
     let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
     guard let code = components?.queryItems?.first(where: { $0.name == "code" })?.value else { return }
-    
+
     Task {
         // Exchange code for session
         let authResponse = try await Descope.oauth.exchange(code: code)
@@ -387,7 +396,7 @@ do {
     let authResponse = try await Descope.passkey.signUpOrIn(loginId: "andy@example.com", options: [])
     let session = DescopeSession(from: authResponse)
     Descope.sessionManager.manageSession(session)
-    showHomeScreen() 
+    showHomeScreen()
 } catch .oauthNativeCancelled {
     showLoading(false)
     print("Authentication cancelled")

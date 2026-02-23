@@ -9,6 +9,18 @@ public struct DescopeConfig {
     /// An optional override for the base URL of the Descope server.
     public var baseURL: String?
 
+    /// An optional override for the session cookie name.
+    ///
+    /// The default session cookie name is `"DS"`. Set this property if your project
+    /// uses a different cookie name for the session token.
+    public var sessionCookieName: String?
+
+    /// An optional override for the refresh cookie name.
+    ///
+    /// The default refresh cookie name is `"DSR"`. Set this property if your project
+    /// uses a different cookie name for the refresh token.
+    public var refreshCookieName: String?
+
     /// An optional object to handle logging in the Descope SDK.
     ///
     /// The default value of this property is `nil` and thus logging will be completely

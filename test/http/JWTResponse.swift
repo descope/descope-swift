@@ -56,6 +56,27 @@ class TestJWTResponse: XCTestCase {
             XCTAssertEqual(authResponse.refreshToken.issuedAt, Date(timeIntervalSince1970: 1526239022))
         }
     }
+
+    func testCustomCookieNamesFromAPI() async throws {
+        let descope = DescopeSDK.mock(refreshCookieName: "DSR_CUSTOM")
+        let customCookiePayload = "DSR_CUSTOM=\(refreshJwt); Path=/; Expires=Thu, 02 Jan 2025 10:01:41 GMT; Max-Age=2419199; HttpOnly; Secure; SameSite=None"
+        MockHTTP.push(body: authPayload, headers: ["Set-Cookie": customCookiePayload])
+        let authResponse = try await descope.otp.verify(with: .email, loginId: "foo", code: "123456")
+        XCTAssertEqual("bar", authResponse.sessionToken.entityId)
+        XCTAssertEqual("qux", authResponse.refreshToken.entityId)
+    }
+
+    func testCustomCookieNamesFromSetValues() async throws {
+        let data = Data(authPayload.utf8)
+        let customSessionCookie = HTTPCookie(properties: [.name: "DS_CUSTOM", .path: "/", .domain: "example.com", .value: sessionJwt])!
+        let customRefreshCookie = HTTPCookie(properties: [.name: "DSR_CUSTOM", .path: "/", .domain: "example.com", .value: refreshJwt])!
+
+        var jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
+        try jwtResponse.setValues(from: data, cookies: [customSessionCookie, customRefreshCookie], sessionCookieName: "DS_CUSTOM", refreshCookieName: "DSR_CUSTOM")
+        let authResponse: AuthenticationResponse = try jwtResponse.convert()
+        XCTAssertEqual("bar", authResponse.sessionToken.entityId)
+        XCTAssertEqual("qux", authResponse.refreshToken.entityId)
+    }
 }
 
 private let cookiePayload = "DSR=\(refreshJwt); Path=/; Expires=Thu, 02 Jan 2025 10:01:41 GMT; Max-Age=2419199; HttpOnly; Secure; SameSite=None"
