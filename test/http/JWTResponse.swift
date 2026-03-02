@@ -20,6 +20,18 @@ class TestJWTResponse: XCTestCase {
         XCTAssertEqual("qux", authResponse.refreshToken.entityId)
     }
 
+    func testCustomCookieNames() async throws {
+        let data = Data(customCookieNamesPayload.utf8)
+        let sessionCookie = HTTPCookie(properties: [.name: "FOO", .path: "/", .domain: "example.com", .value: sessionJwt])!
+        let refreshCookie = HTTPCookie(properties: [.name: "BAR", .path: "/", .domain: "example.com", .value: refreshJwt])!
+
+        var jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
+        try jwtResponse.setValues(from: data, cookies: [sessionCookie, refreshCookie], refreshCookieName: nil)
+        let authResponse: AuthenticationResponse = try jwtResponse.convert()
+        XCTAssertEqual("bar", authResponse.sessionToken.entityId)
+        XCTAssertEqual("qux", authResponse.refreshToken.entityId)
+    }
+
     func testPageCookie() async throws {
         let data = Data(authPayload.utf8)
 
@@ -59,6 +71,17 @@ class TestJWTResponse: XCTestCase {
 }
 
 private let cookiePayload = "DSR=\(refreshJwt); Path=/; Expires=Thu, 02 Jan 2025 10:01:41 GMT; Max-Age=2419199; HttpOnly; Secure; SameSite=None"
+
+private let customCookieNamesPayload = """
+{
+    "sessionJwt": "",
+    "refreshJwt": "",
+    "sessionCookieName": "FOO",
+    "cookieName": "BAR",
+    "user": \(userPayload),
+    "firstSeen": false
+}
+"""
 
 private let authPayload = """
 {
