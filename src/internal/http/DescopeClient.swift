@@ -3,11 +3,11 @@ import Foundation
 
 final class DescopeClient: HTTPClient, @unchecked Sendable {
     let config: DescopeConfig
-    
+
     init(config: DescopeConfig) {
         self.config = config
         let baseURL = config.baseURL ?? baseURLForProjectId(config.projectId)
-        super.init(baseURL: baseURL, logger: config.logger, networkClient: config.networkClient)
+        super.init(baseURL: baseURL, logger: config.logger, networkClient: config.networkClient, certificatePins: config.certificatePins)
     }
     
     // MARK: - OTP
