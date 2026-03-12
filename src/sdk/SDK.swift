@@ -127,6 +127,34 @@ public class DescopeSDK {
         self.oauth = OAuth(client: client)
         self.sso = SSO(client: client)
         self.accessKey = AccessKey(client: client)
+
+        // Perform security validation if enabled
+        if config.validateDeviceSecurity {
+            performSecurityValidation(config: config)
+        }
+    }
+
+    /// Performs device security validation
+    private func performSecurityValidation(config: DescopeConfig) {
+        let validator = SecurityValidator(logger: config.logger)
+        let result = validator.validate(mode: config.securityValidationMode)
+
+        switch result {
+        case .success:
+            config.logger?.debug("✅ Device security validation passed")
+
+        case .failure(let error):
+            let descopeError = DescopeError.securityValidationFailed.with(message: error.description)
+            config.logger?.error("❌ Device security validation failed: \(error.description)")
+
+            // In strict mode, we've already logged the error - the SDK is still initialized
+            // but operations may fail later. Users should handle this appropriately.
+            // We cannot throw from init, so we log and continue.
+            if config.securityValidationMode == .strict {
+                config.logger?.error("⚠️ SDK initialized but may refuse operations due to security validation failure")
+                config.logger?.error("⚠️ Error details: \(descopeError)")
+            }
+        }
     }
 
     /// The type of the closure set in ``resume(with:)`` by SDK components.

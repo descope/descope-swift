@@ -97,9 +97,18 @@ extension DescopeError {
 
     public static let oauthNativeFailed = DescopeError.sdkError("S120001", "Sign in with Apple failed")
     public static let oauthNativeCancelled = DescopeError.sdkError("S120002", "Sign in with Apple cancelled")
-    
+
     public static let webAuthFailed = DescopeError.sdkError("S130001", "Web authentication failed")
     public static let webAuthCancelled = DescopeError.sdkError("S130002", "Web authentication cancelled")
+
+    /// Thrown when device security validation fails.
+    ///
+    /// This error is thrown when `validateDeviceSecurity` is enabled in ``DescopeConfig`` with
+    /// ``SecurityValidationMode/strict`` mode and the device is detected as jailbroken, rooted,
+    /// or otherwise compromised.
+    ///
+    /// Check the ``message`` property for specific security findings.
+    public static let securityValidationFailed = DescopeError.sdkError("S140001", "Device security validation failed")
 }
 
 /// Extension functions for catching ``DescopeError`` values.

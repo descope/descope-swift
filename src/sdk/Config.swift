@@ -46,6 +46,78 @@ public struct DescopeConfig {
     /// network requests actually taking place. In most other cases there shouldn't be
     /// any need to use it.
     public var networkClient: DescopeNetworkClient?
+
+    /// Certificate pinning configuration for enhanced TLS security.
+    ///
+    /// Certificate pinning helps prevent man-in-the-middle attacks by validating that the
+    /// server's certificate matches a set of known, trusted certificates or public keys.
+    ///
+    /// **Example - Pin using SHA-256 public key hashes:**
+    /// ```swift
+    /// Descope.setup(projectId: "...") { config in
+    ///     config.certificatePins = [
+    ///         "api.descope.com": [
+    ///             "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    ///             "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
+    ///         ]
+    ///     ]
+    /// }
+    /// ```
+    ///
+    /// To extract SHA-256 hashes from a certificate:
+    /// ```bash
+    /// openssl s_client -connect api.descope.com:443 -servername api.descope.com < /dev/null \
+    ///   | openssl x509 -pubkey -noout \
+    ///   | openssl pkey -pubin -outform der \
+    ///   | openssl dgst -sha256 -binary \
+    ///   | openssl enc -base64
+    /// ```
+    ///
+    /// - Important: Always pin at least 2 certificates (primary + backup) to allow for
+    ///   certificate rotation without breaking your app.
+    ///
+    /// - Note: Certificate pinning is automatically disabled in DEBUG builds when the
+    ///   certificate validation bypass is active.
+    public var certificatePins: [String: [String]]?
+
+    /// Whether to validate device security before allowing SDK operations.
+    ///
+    /// When enabled, the SDK checks for:
+    /// - Jailbroken iOS devices
+    /// - Debugger attachment
+    /// - Suspicious runtime environment modifications
+    ///
+    /// If the device is deemed insecure, SDK initialization may fail or operations
+    /// may be restricted depending on `securityValidationMode`.
+    ///
+    /// Default: `false` (disabled for backward compatibility)
+    ///
+    /// Example:
+    /// ```swift
+    /// Descope.setup(projectId: "...") { config in
+    ///     config.validateDeviceSecurity = true
+    ///     config.securityValidationMode = .strict
+    /// }
+    /// ```
+    public var validateDeviceSecurity: Bool = false
+
+    /// Controls how the SDK responds to security validation failures.
+    ///
+    /// - `warn`: Log warnings but allow SDK operations to continue
+    /// - `strict`: Throw errors and prevent SDK operations on insecure devices
+    ///
+    /// Default: `.warn`
+    ///
+    /// - Note: Only takes effect when `validateDeviceSecurity` is `true`
+    public var securityValidationMode: SecurityValidationMode = .warn
+}
+
+/// Mode for handling security validation failures
+public enum SecurityValidationMode {
+    /// Log security warnings but allow SDK to operate
+    case warn
+    /// Prevent SDK operations on devices that fail security checks
+    case strict
 }
 
 /// Built-in console loggers for use during development.

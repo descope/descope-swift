@@ -5,11 +5,11 @@ class HTTPClient {
     let baseURL: String
     let logger: DescopeLogger?
     let networkClient: DescopeNetworkClient
-    
-    init(baseURL: String, logger: DescopeLogger?, networkClient: DescopeNetworkClient?) {
+
+    init(baseURL: String, logger: DescopeLogger?, networkClient: DescopeNetworkClient?, certificatePins: [String: [String]]? = nil) {
         self.baseURL = baseURL
         self.logger = logger
-        self.networkClient = networkClient ?? DefaultNetworkClient()
+        self.networkClient = networkClient ?? DefaultNetworkClient(certificatePins: certificatePins, logger: logger)
     }
     
     // Convenience response functions
@@ -194,29 +194,74 @@ private func mergeHeaders(_ headers: [String: String], with defaults: [String: S
 // Network
 
 private final class DefaultNetworkClient: DescopeNetworkClient {
-    private let session = makeURLSession()
-    
+    private let session: URLSession
+
+    init(certificatePins: [String: [String]]?, logger: DescopeLogger?) {
+        self.session = makeURLSession(certificatePins: certificatePins, logger: logger)
+    }
+
     deinit {
         session.finishTasksAndInvalidate()
     }
-    
+
     func call(request: URLRequest) async throws -> (Data, URLResponse) {
         return try await session.data(for: request)
     }
 }
 
-private func makeURLSession() -> URLSession {
+private func makeURLSession(certificatePins: [String: [String]]?, logger: DescopeLogger?) -> URLSession {
+    let configuration = URLSessionConfiguration.default
+
     #if DEBUG
-    return URLSession(configuration: URLSessionConfiguration.default, delegate: CerificateErrorIgnorer(), delegateQueue: nil)
+    // ⚠️ SECURITY WARNING: DEBUG builds disable ALL TLS certificate validation
+    // This delegate accepts any certificate, including self-signed and invalid certificates.
+    //
+    // WHY THIS EXISTS:
+    // - Allows testing against local development servers with self-signed certificates
+    // - Enables proxy debugging tools (Charles, Proxyman) during development
+    //
+    // CRITICAL SECURITY REQUIREMENTS:
+    // - NEVER ship production builds with DEBUG flags enabled
+    // - Verify release builds in Xcode: Build Settings → Swift Compiler → Active Compilation Conditions
+    // - Consider using certificate pinning for production (see DescopeConfig.certificatePins)
+    // - Add CI/CD checks to prevent DEBUG builds from reaching production
+    //
+    // If you see this warning in production logs, IMMEDIATELY investigate your build configuration!
+    print("⚠️ [DESCOPE SECURITY WARNING] TLS certificate validation is DISABLED in DEBUG mode")
+    print("⚠️ This build is vulnerable to man-in-the-middle attacks - DO NOT USE IN PRODUCTION")
+
+    // Note: Certificate pinning is disabled in DEBUG mode to allow development debugging
+    return URLSession(configuration: configuration, delegate: CertificateDebugDelegate(), delegateQueue: nil)
     #else
-    return URLSession(configuration: URLSessionConfiguration.default, delegate: nil, delegateQueue: nil)
+    // Production builds: Use certificate pinning if configured
+    if let pins = certificatePins, !pins.isEmpty {
+        logger?.info("Certificate pinning enabled for \(pins.keys.count) host(s)")
+        return URLSession(configuration: configuration, delegate: CertificatePinningDelegate(pins: pins, logger: logger), delegateQueue: nil)
+    } else {
+        // No pinning configured - use default system validation
+        return URLSession(configuration: configuration, delegate: nil, delegateQueue: nil)
+    }
     #endif
 }
 
 #if DEBUG
-private final class CerificateErrorIgnorer: NSObject, URLSessionDelegate {
+/// **⚠️ SECURITY WARNING: This delegate disables ALL TLS certificate validation**
+///
+/// This class accepts any certificate without validation, making the connection
+/// vulnerable to man-in-the-middle (MITM) attacks.
+///
+/// - Important: This is ONLY active in DEBUG builds. Production builds MUST NOT
+///   include DEBUG compilation flags.
+///
+/// - Note: If you need to test with specific certificates in development, consider
+///   implementing proper certificate pinning instead of disabling all validation.
+private final class CertificateDebugDelegate: NSObject, URLSessionDelegate {
     func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
         guard let trust = challenge.protectionSpace.serverTrust else { return (.performDefaultHandling, nil) }
+
+        // Log every bypassed certificate check
+        print("⚠️ [DEBUG] Bypassing certificate validation for: \(challenge.protectionSpace.host)")
+
         return (.useCredential, URLCredential(trust: trust))
     }
 }
