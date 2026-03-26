@@ -40,6 +40,7 @@ private func presentWebAuthentication(url: URL, accessSharedUserData: Bool, logg
             }
 
             session.presentationContextProvider = contextProvider
+            session.prefersEphemeralWebBrowserSession = !accessSharedUserData
             session.start()
         }
     } onCancel: {
