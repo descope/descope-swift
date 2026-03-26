@@ -15,7 +15,7 @@ enum WebAuth {
 @MainActor
 private func presentWebAuthentication(url: URL, accessSharedUserData: Bool, logger: DescopeLogger?) async throws(DescopeError) -> URL? {
     let contextProvider = DefaultPresentationContextProvider()
-    var cancellation: @MainActor () -> Void = {}
+    nonisolated(unsafe) var cancellation: @MainActor () -> Void = {}
 
     #if os(iOS) && canImport(React)
     await contextProvider.waitKeyWindow()
@@ -31,6 +31,10 @@ private func presentWebAuthentication(url: URL, accessSharedUserData: Bool, logg
                 }
             }
 
+            guard !Task.isCancelled else {
+                continuation.resume(returning: .failure(CancellationError()))
+                return
+            }
             cancellation = { @MainActor [weak session] in
                 logger.info("Web authentication cancelled programmatically")
                 session?.cancel()
