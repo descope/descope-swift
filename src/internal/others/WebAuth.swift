@@ -14,9 +14,12 @@ enum WebAuth {
 
 @MainActor
 private func presentWebAuthentication(url: URL, accessSharedUserData: Bool, logger: DescopeLogger?) async throws(DescopeError) -> URL? {
-    let contextProvider = DefaultPresentationContextProvider()
-    nonisolated(unsafe) var cancellation: @MainActor () -> Void = {}
+    // create a constant class instance to wrap the cancellation closure because
+    // the onCancel closure below is nonisolated and can be called concurrently
+    // with the main async closure that sets its value
+    let cancellation = CancellationWrapper()
 
+    let contextProvider = DefaultPresentationContextProvider()
     #if os(iOS) && canImport(React)
     await contextProvider.waitKeyWindow()
     #endif
@@ -31,11 +34,7 @@ private func presentWebAuthentication(url: URL, accessSharedUserData: Bool, logg
                 }
             }
 
-            guard !Task.isCancelled else {
-                continuation.resume(returning: .failure(CancellationError()))
-                return
-            }
-            cancellation = { @MainActor [weak session] in
+            cancellation.closure = { @MainActor [weak session] in
                 logger.info("Web authentication cancelled programmatically")
                 session?.cancel()
             }
@@ -45,7 +44,7 @@ private func presentWebAuthentication(url: URL, accessSharedUserData: Bool, logg
         }
     } onCancel: {
         Task { @MainActor in
-            cancellation()
+            cancellation.closure()
         }
     }
 
@@ -66,6 +65,11 @@ private func presentWebAuthentication(url: URL, accessSharedUserData: Bool, logg
         logger.debug("Processing OAuth web authentication", callbackURL)
         return callbackURL
     }
+}
+
+@MainActor
+private final class CancellationWrapper {
+    var closure: @MainActor () -> Void = {}
 }
 
 private func parseExchangeCode(from callbackURL: URL?) throws(DescopeError) -> String {
