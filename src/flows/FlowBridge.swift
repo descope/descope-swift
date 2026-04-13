@@ -501,7 +501,7 @@ window.descopeBridge = {
         platformVersion: \(SystemInfo.osVersion.javaScriptLiteralString()),
         appName: \(SystemInfo.appName?.javaScriptLiteralString() ?? "''"),
         appVersion: \(SystemInfo.appVersion?.javaScriptLiteralString() ?? "''"), 
-        device: \(SystemInfo.device?.javaScriptLiteralString() ?? "''"),
+        device: \(SystemInfo.device.javaScriptLiteralString()),
         webauthn: true,
     },
 
