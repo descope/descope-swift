@@ -576,6 +576,7 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
             "x-descope-sdk-version": DescopeSDK.version,
             "x-descope-platform-name": SystemInfo.osName,
             "x-descope-platform-version": SystemInfo.osVersion,
+            "x-descope-device": SystemInfo.device,
             "x-descope-project-id": config.projectId,
         ]
         if let appName = SystemInfo.appName, !appName.isEmpty {
@@ -583,9 +584,6 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         }
         if let appVersion = SystemInfo.appVersion, !appVersion.isEmpty {
             headers["x-descope-app-version"] = appVersion
-        }
-        if let device = SystemInfo.device, !device.isEmpty {
-            headers["x-descope-device"] = device
         }
         return headers
     }

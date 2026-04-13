@@ -8,7 +8,7 @@ final class Push: DescopePush {
     
     func enroll(token: String, development: Bool, refreshJwt: String) async throws(DescopeError) {
         let provider = development ? "apndev" : "apn"
-        try await client.pushEnrollDevice(provider: provider, token: token, device: SystemInfo.device ?? "iPhone", refreshJwt: refreshJwt)
+        try await client.pushEnrollDevice(provider: provider, token: token, device: SystemInfo.device, refreshJwt: refreshJwt)
     }
     
     func finish(transactionId: String, approved: Bool, refreshJwt: String) async throws(DescopeError) {
