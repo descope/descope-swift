@@ -367,7 +367,7 @@ private extension FlowBridgeRequest {
             guard let start = payload["start"] as? [String: Any] else { return nil }
             guard let clientId = start["clientId"] as? String, let stateId = start["stateId"] as? String, let nonce = start["nonce"] as? String, let implicit = start["implicit"] as? Bool else { return nil }
             self = .oauthNative(clientId: clientId, stateId: stateId, nonce: nonce, implicit: implicit)
-        case "oauthWeb", "sso":
+        case "oauthWeb", "sso", "externalAuth":
             guard let startString = payload["startUrl"] as? String, let startURL = URL(string: startString) else { return nil }
             var finishURL: URL?
             if let str = payload["finishUrl"] as? String, !str.isEmpty, let url = URL(string: str) {
@@ -446,6 +446,7 @@ private struct FlowNativeOptions: Encodable {
     var oauthProvider = ""
     var oauthRedirect = WebAuth.redirectURL
     var ssoRedirect = WebAuth.redirectURL
+    var externalAuthRedirect = WebAuth.redirectURL
     var magicLinkRedirect = ""
 
     var payload: String {
