@@ -84,6 +84,60 @@ class TestHttpMethods: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
     }
+
+    func testTraceId() async throws {
+        let logger = CapturingLogger()
+        let client = HTTPClient(baseURL: "http://example", logger: logger, networkClient: MockHTTP.networkClient)
+
+        // the CF-Ray header is exposed on the error and included in the failure log
+        do {
+            MockHTTP.push(statusCode: 400, json: [:], headers: ["CF-Ray": "8a1b2c3d4e5f6789-IAD"])
+            try await client.get("route")
+            XCTFail("No error thrown")
+        } catch let err as DescopeError {
+            XCTAssertEqual(err.traceId, "8a1b2c3d4e5f6789-IAD")
+            XCTAssertTrue(logger.messages.contains { $0.contains("8a1b2c3d4e5f6789-IAD") }, "Expected the CF-Ray to appear in the failure log")
+        }
+
+        // no CF-Ray header means no trace identifier
+        do {
+            MockHTTP.push(statusCode: 400, json: [:])
+            try await client.get("route")
+            XCTFail("No error thrown")
+        } catch let err as DescopeError {
+            XCTAssertNil(err.traceId)
+        }
+    }
+
+    func testTraceIdForServerError() async throws {
+        let client = ParsingHTTPClient(baseURL: "http://example", logger: nil, networkClient: MockHTTP.networkClient)
+        do {
+            MockHTTP.push(statusCode: 400, json: ["errorCode": "E061102", "errorMessage": "failed to validate nonce"], headers: ["CF-Ray": "abc123def456-IAD"])
+            try await client.get("route")
+            XCTFail("No error thrown")
+        } catch let err as DescopeError {
+            XCTAssertEqual(err.code, "E061102")
+            XCTAssertEqual(err.traceId, "abc123def456-IAD")
+        }
+    }
+}
+
+private final class CapturingLogger: DescopeLogger, @unchecked Sendable {
+    nonisolated(unsafe) var messages: [String] = []
+
+    init() {
+        super.init(level: .debug, unsafe: false)
+    }
+
+    override func output(level: Level, message: String, unsafe values: [Any]) {
+        messages.append(message)
+    }
+}
+
+private final class ParsingHTTPClient: HTTPClient {
+    override func errorForResponseData(_ data: Data) -> DescopeError? {
+        return DescopeError(errorResponse: data)
+    }
 }
 
 private let mockBodyJSON: [String: Sendable] = ["foo": 4]
