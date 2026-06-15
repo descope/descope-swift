@@ -7,15 +7,15 @@ extension DescopeSDK {
 
 extension DescopeError {
     func with(desc: String) -> DescopeError {
-        return DescopeError(code: code, desc: desc, message: message, cause: cause)
+        return DescopeError(code: code, desc: desc, message: message, cause: cause, traceId: traceId)
     }
     
     func with(message: String) -> DescopeError {
-        return DescopeError(code: code, desc: desc, message: message, cause: cause)
+        return DescopeError(code: code, desc: desc, message: message, cause: cause, traceId: traceId)
     }
     
     func with(cause: Error) -> DescopeError {
-        return DescopeError(code: code, desc: desc, message: message, cause: cause)
+        return DescopeError(code: code, desc: desc, message: message, cause: cause, traceId: traceId)
     }
 }
 
