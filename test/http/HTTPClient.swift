@@ -109,7 +109,7 @@ class TestHttpMethods: XCTestCase {
         }
     }
 
-    func testTraceIdForServerError() async throws {
+    func testTraceIdForErrorResponse() async throws {
         let client = ParsingHTTPClient(baseURL: "http://example", logger: nil, networkClient: MockHTTP.networkClient)
         do {
             MockHTTP.push(statusCode: 400, json: ["errorCode": "E061102", "errorMessage": "failed to validate nonce"], headers: ["CF-Ray": "abc123def456-IAD"])
