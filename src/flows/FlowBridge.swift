@@ -224,7 +224,15 @@ extension FlowBridge {
             }
         case .failure:
             logger.error("Bridge received failure event", message.body)
-            if let dict = message.body as? [String: Any], let error = DescopeError(errorResponse: dict) {
+            if let dict = message.body as? [String: Any], var error = DescopeError(errorResponse: dict) {
+                // Convert server flow cancellation to local flow cancellation for cohesive error handling
+                if error.code == "E102122" {
+                    if let message = error.message {
+                        error = DescopeError.flowCancelled.with(message: message)
+                    } else {
+                        error = DescopeError.flowCancelled
+                    }
+                }
                 delegate?.bridgeDidFailAuthentication(self, error: error)
             } else if let reason = message.body as? String, !reason.isEmpty {
                 delegate?.bridgeDidFailAuthentication(self, error: DescopeError.flowFailed.with(message: reason))
