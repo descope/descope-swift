@@ -6,16 +6,21 @@ extension DescopeSDK {
 }
 
 extension DescopeError {
-    func with(desc: String) -> DescopeError {
-        return DescopeError(code: code, desc: desc, message: message, cause: cause, traceId: traceId)
-    }
-    
-    func with(message: String) -> DescopeError {
-        return DescopeError(code: code, desc: desc, message: message, cause: cause, traceId: traceId)
-    }
-    
-    func with(cause: Error) -> DescopeError {
-        return DescopeError(code: code, desc: desc, message: message, cause: cause, traceId: traceId)
+    func with(desc: String? = nil, message: String? = nil, cause: Error? = nil, traceId: String? = nil) -> DescopeError {
+        var error = self
+        if let desc, !desc.isEmpty {
+            error.desc = desc
+        }
+        if let message, !message.isEmpty {
+            error.message = message
+        }
+        if let cause {
+            error.cause = cause
+        }
+        if let traceId, !traceId.isEmpty {
+            error.traceId = traceId
+        }
+        return error
     }
 }
 

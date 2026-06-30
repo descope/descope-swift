@@ -94,8 +94,8 @@ class TestHttpMethods: XCTestCase {
             MockHTTP.push(statusCode: 400, json: [:], headers: ["CF-Ray": "8a1b2c3d4e5f6789-IAD"])
             try await client.get("route")
             XCTFail("No error thrown")
-        } catch let err as DescopeError {
-            XCTAssertEqual(err.traceId, "8a1b2c3d4e5f6789-IAD")
+        } catch {
+            XCTAssertEqual(error.traceId, "8a1b2c3d4e5f6789-IAD")
             XCTAssertTrue(logger.messages.contains { $0.contains("8a1b2c3d4e5f6789-IAD") }, "Expected the CF-Ray to appear in the failure log")
         }
 
@@ -104,8 +104,8 @@ class TestHttpMethods: XCTestCase {
             MockHTTP.push(statusCode: 400, json: [:])
             try await client.get("route")
             XCTFail("No error thrown")
-        } catch let err as DescopeError {
-            XCTAssertNil(err.traceId)
+        } catch {
+            XCTAssertNil(error.traceId)
         }
     }
 
@@ -115,9 +115,9 @@ class TestHttpMethods: XCTestCase {
             MockHTTP.push(statusCode: 400, json: ["errorCode": "E061102", "errorMessage": "failed to validate nonce"], headers: ["CF-Ray": "abc123def456-IAD"])
             try await client.get("route")
             XCTFail("No error thrown")
-        } catch let err as DescopeError {
-            XCTAssertEqual(err.code, "E061102")
-            XCTAssertEqual(err.traceId, "abc123def456-IAD")
+        } catch {
+            XCTAssertEqual(error.code, "E061102")
+            XCTAssertEqual(error.traceId, "abc123def456-IAD")
         }
     }
 }
