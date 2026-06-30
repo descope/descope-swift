@@ -225,13 +225,8 @@ extension FlowBridge {
         case .failure:
             logger.error("Bridge received failure event", message.body)
             if let dict = message.body as? [String: Any], var error = DescopeError(errorResponse: dict) {
-                // Convert server flow cancellation to local flow cancellation for cohesive error handling
-                if error.code == "E102122" {
-                    if let message = error.message {
-                        error = DescopeError.flowCancelled.with(message: message)
-                    } else {
-                        error = DescopeError.flowCancelled
-                    }
+                if error.code == "E102122" { // convert server-side flow aborted error to client-side flow cancelled error
+                    error = DescopeError.flowCancelled.with(message: error.message)
                 }
                 delegate?.bridgeDidFailAuthentication(self, error: error)
             } else if let reason = message.body as? String, !reason.isEmpty {
@@ -294,7 +289,7 @@ extension FlowBridge: WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation, withError error: Error) {
-        var error = error as NSError
+        let error = error as NSError
         
         // Ignore navigation cancellations that are an expected part of the navigation lifecycle
         // due to, e.g., redirects,

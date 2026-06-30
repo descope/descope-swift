@@ -193,15 +193,6 @@ private func mergeHeaders(_ headers: [String: String], with defaults: [String: S
     return result
 }
 
-// Errors
-
-private extension DescopeError {
-    func with(traceId: String?) -> DescopeError {
-        guard let traceId else { return self }
-        return DescopeError(code: code, desc: desc, message: message, cause: cause, traceId: traceId)
-    }
-}
-
 // Network
 
 private final class DefaultNetworkClient: DescopeNetworkClient {
