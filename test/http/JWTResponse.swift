@@ -32,6 +32,22 @@ class TestJWTResponse: XCTestCase {
         XCTAssertEqual("qux", authResponse.refreshToken.entityId)
     }
 
+    func testExternalToken() async throws {
+        // with external token
+        var data = Data(externalTokenPayload.utf8)
+        var jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
+        try jwtResponse.setValues(from: data, cookies: [], refreshCookieName: nil)
+        var authResponse: AuthenticationResponse = try jwtResponse.convert()
+        XCTAssertEqual("ext-token-value", authResponse.externalToken)
+
+        // no external token
+        data = Data(noExternalTokenPayload.utf8)
+        jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
+        try jwtResponse.setValues(from: data, cookies: [], refreshCookieName: nil)
+        authResponse = try jwtResponse.convert()
+        XCTAssertNil(authResponse.externalToken)
+    }
+
     func testPageCookie() async throws {
         let data = Data(authPayload.utf8)
 
@@ -87,6 +103,25 @@ private let authPayload = """
 {
     "sessionJwt": "\(sessionJwt)",
     "refreshJwt": "",
+    "user": \(userPayload),
+    "firstSeen": true
+}
+"""
+
+private let externalTokenPayload = """
+{
+    "sessionJwt": "\(sessionJwt)",
+    "refreshJwt": "\(refreshJwt)",
+    "user": \(userPayload),
+    "firstSeen": true,
+    "externalToken": "ext-token-value"
+}
+"""
+
+private let noExternalTokenPayload = """
+{
+    "sessionJwt": "\(sessionJwt)",
+    "refreshJwt": "\(refreshJwt)",
     "user": \(userPayload),
     "firstSeen": true
 }
