@@ -447,6 +447,7 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         var cookieDomain: String?
         var cookieName: String?
         var sessionCookieName: String?
+        var externalToken: String?
 
         mutating func setValues(from data: Data, response: HTTPURLResponse) throws {
             guard let url = response.url, let fields = response.allHeaderFields as? [String: String] else { return }
