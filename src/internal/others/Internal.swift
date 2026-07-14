@@ -229,6 +229,7 @@ extension AuthenticationResponse: Codable {
         case refreshToken = "refreshJwt"
         case user
         case isFirstAuthentication
+        case externalToken
     }
 
     public init(from decoder: Decoder) throws {
@@ -237,6 +238,7 @@ extension AuthenticationResponse: Codable {
         refreshToken = try Token(jwt: values.decode(String.self, forKey: .refreshToken))
         user = try values.decode(DescopeUser.self, forKey: .user)
         isFirstAuthentication = try values.decode(Bool.self, forKey: .isFirstAuthentication)
+        externalToken = try values.decodeIfPresent(String.self, forKey: .externalToken)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -245,6 +247,7 @@ extension AuthenticationResponse: Codable {
         try values.encode(refreshToken.jwt, forKey: .refreshToken)
         try values.encode(user, forKey: .user)
         try values.encode(isFirstAuthentication, forKey: .isFirstAuthentication)
+        try values.encodeIfPresent(externalToken, forKey: .externalToken)
     }
 }
 
