@@ -227,9 +227,9 @@ extension AuthenticationResponse: Codable {
     enum CodingKeys: String, CodingKey {
         case sessionToken = "sessionJwt"
         case refreshToken = "refreshJwt"
+        case externalToken
         case user
         case isFirstAuthentication
-        case externalToken
         case flowOutput
     }
 
@@ -240,11 +240,10 @@ extension AuthenticationResponse: Codable {
         user = try values.decode(DescopeUser.self, forKey: .user)
         isFirstAuthentication = try values.decode(Bool.self, forKey: .isFirstAuthentication)
         externalToken = try values.decodeIfPresent(String.self, forKey: .externalToken)
-        // flowOutput is an arbitrary JSON object; round-trip it through JSONValue
-        // so it survives as a nested object across the RN/Flutter bridges
-        if let value = try values.decodeIfPresent(JSONValue.self, forKey: .flowOutput) {
-            let data = try JSONEncoder().encode(value)
-            flowOutput = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        if let value = try values.decodeIfPresent(String.self, forKey: .flowOutput) {
+            flowOutput = try JSONSerialization.jsonObject(with: Data(value.utf8)) as? [String: Any] ?? [:]
+        } else {
+            flowOutput = [:]
         }
     }
 
@@ -255,57 +254,10 @@ extension AuthenticationResponse: Codable {
         try values.encode(user, forKey: .user)
         try values.encode(isFirstAuthentication, forKey: .isFirstAuthentication)
         try values.encodeIfPresent(externalToken, forKey: .externalToken)
-        if let flowOutput, JSONSerialization.isValidJSONObject(flowOutput) {
+        if !flowOutput.isEmpty, JSONSerialization.isValidJSONObject(flowOutput) {
             let data = try JSONSerialization.data(withJSONObject: flowOutput)
-            let value = try JSONDecoder().decode(JSONValue.self, from: data)
-            try values.encode(value, forKey: .flowOutput)
-        }
-    }
-}
-
-/// A `Codable` representation of an arbitrary JSON value, used to encode and
-/// decode the `flowOutput` object as a nested JSON object (rather than a string)
-/// so that the React Native and Flutter bridges receive it as a map.
-enum JSONValue: Codable {
-    case null
-    case bool(Bool)
-    case int(Int)
-    case double(Double)
-    case string(String)
-    case array([JSONValue])
-    case object([String: JSONValue])
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if container.decodeNil() {
-            self = .null
-        } else if let value = try? container.decode(Bool.self) {
-            self = .bool(value)
-        } else if let value = try? container.decode(Int.self) {
-            self = .int(value)
-        } else if let value = try? container.decode(Double.self) {
-            self = .double(value)
-        } else if let value = try? container.decode(String.self) {
-            self = .string(value)
-        } else if let value = try? container.decode([JSONValue].self) {
-            self = .array(value)
-        } else if let value = try? container.decode([String: JSONValue].self) {
-            self = .object(value)
-        } else {
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported JSON value")
-        }
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch self {
-        case .null: try container.encodeNil()
-        case .bool(let value): try container.encode(value)
-        case .int(let value): try container.encode(value)
-        case .double(let value): try container.encode(value)
-        case .string(let value): try container.encode(value)
-        case .array(let value): try container.encode(value)
-        case .object(let value): try container.encode(value)
+            let value = String(bytes: data, encoding: .utf8)
+            try values.encodeIfPresent(value, forKey: .flowOutput)
         }
     }
 }

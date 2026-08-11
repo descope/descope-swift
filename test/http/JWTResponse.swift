@@ -54,23 +54,24 @@ class TestJWTResponse: XCTestCase {
         var jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
         try jwtResponse.setValues(from: data, cookies: [], refreshCookieName: nil)
         var authResponse: AuthenticationResponse = try jwtResponse.convert()
-        XCTAssertNotNil(authResponse.flowOutput)
-        XCTAssertEqual("value", authResponse.flowOutput?["key"] as? String)
-        XCTAssertEqual(3, authResponse.flowOutput?["count"] as? Int)
+        XCTAssertEqual("value", authResponse.flowOutput["key"] as? String)
+        XCTAssertEqual(3, authResponse.flowOutput["count"] as? Int)
 
-        // survives a Codable round-trip as a nested object (RN/Flutter bridges)
+        // survives a Codable round-trip, serialized as a JSON string like customAttributes
         let encoded = try JSONEncoder().encode(authResponse)
         let object = try JSONSerialization.jsonObject(with: encoded) as? [String: Any]
-        XCTAssertEqual("value", (object?["flowOutput"] as? [String: Any])?["key"] as? String)
+        XCTAssertTrue(object?["flowOutput"] is String)
         let decoded = try JSONDecoder().decode(AuthenticationResponse.self, from: encoded)
-        XCTAssertEqual("value", decoded.flowOutput?["key"] as? String)
+        XCTAssertEqual("value", decoded.flowOutput["key"] as? String)
+        XCTAssertEqual(3, decoded.flowOutput["count"] as? Int)
+        XCTAssertEqual(true, (decoded.flowOutput["nested"] as? [String: Any])?["inner"] as? Bool)
 
         // no flow output
         data = Data(noExternalTokenPayload.utf8)
         jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
         try jwtResponse.setValues(from: data, cookies: [], refreshCookieName: nil)
         authResponse = try jwtResponse.convert()
-        XCTAssertNil(authResponse.flowOutput)
+        XCTAssertTrue(authResponse.flowOutput.isEmpty)
     }
 
     func testPageCookie() async throws {

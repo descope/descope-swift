@@ -443,7 +443,7 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         var sessionJwt: String?
         var refreshJwt: String?
         var user: UserResponse?
-        var firstSeen: Bool
+        var firstSeen: Bool?
         var cookieDomain: String?
         var cookieName: String?
         var sessionCookieName: String?
