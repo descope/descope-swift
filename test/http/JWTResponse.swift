@@ -48,6 +48,32 @@ class TestJWTResponse: XCTestCase {
         XCTAssertNil(authResponse.externalToken)
     }
 
+    func testFlowOutput() async throws {
+        // with flow output
+        var data = Data(flowOutputPayload.utf8)
+        var jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
+        try jwtResponse.setValues(from: data, cookies: [], refreshCookieName: nil)
+        var authResponse: AuthenticationResponse = try jwtResponse.convert()
+        XCTAssertEqual("value", authResponse.flowOutput["key"] as? String)
+        XCTAssertEqual(3, authResponse.flowOutput["count"] as? Int)
+
+        // survives a Codable round-trip, serialized as a JSON string like customAttributes
+        let encoded = try JSONEncoder().encode(authResponse)
+        let object = try JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        XCTAssertTrue(object?["flowOutput"] is String)
+        let decoded = try JSONDecoder().decode(AuthenticationResponse.self, from: encoded)
+        XCTAssertEqual("value", decoded.flowOutput["key"] as? String)
+        XCTAssertEqual(3, decoded.flowOutput["count"] as? Int)
+        XCTAssertEqual(true, (decoded.flowOutput["nested"] as? [String: Any])?["inner"] as? Bool)
+
+        // no flow output
+        data = Data(noExternalTokenPayload.utf8)
+        jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
+        try jwtResponse.setValues(from: data, cookies: [], refreshCookieName: nil)
+        authResponse = try jwtResponse.convert()
+        XCTAssertTrue(authResponse.flowOutput.isEmpty)
+    }
+
     func testPageCookie() async throws {
         let data = Data(authPayload.utf8)
 
@@ -115,6 +141,20 @@ private let externalTokenPayload = """
     "user": \(userPayload),
     "firstSeen": true,
     "externalToken": "ext-token-value"
+}
+"""
+
+private let flowOutputPayload = """
+{
+    "sessionJwt": "\(sessionJwt)",
+    "refreshJwt": "\(refreshJwt)",
+    "user": \(userPayload),
+    "firstSeen": true,
+    "flowOutput": {
+        "key": "value",
+        "count": 3,
+        "nested": { "inner": true }
+    }
 }
 """
 
