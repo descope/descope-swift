@@ -241,7 +241,7 @@ extension AuthenticationResponse: Codable {
         isFirstAuthentication = try values.decode(Bool.self, forKey: .isFirstAuthentication)
         externalToken = try values.decodeIfPresent(String.self, forKey: .externalToken)
         if let value = try values.decodeIfPresent(String.self, forKey: .flowOutput) {
-            flowOutput = try JSONSerialization.jsonObject(with: Data(value.utf8)) as? [String: Any] ?? [:]
+            flowOutput = (try? JSONSerialization.jsonObject(with: Data(value.utf8))) as? [String: Any] ?? [:]
         } else {
             flowOutput = [:]
         }
