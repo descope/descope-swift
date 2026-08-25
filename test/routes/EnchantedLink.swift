@@ -12,38 +12,28 @@ class TestEnchantedLink: XCTestCase {
             XCTAssertEqual(body["loginId"] as? String, "foo")
         }
 
-        let response = try await descope.enchantedLink.signUp(with: .email, loginId: "foo", details: nil, redirectURL: nil)
+        let response = try await descope.enchantedLink.signUp(loginId: "foo", details: nil, redirectURL: nil)
         XCTAssertEqual("link1", response.linkId)
         XCTAssertEqual("pending1", response.pendingRef)
         XCTAssertEqual("a***@b.com", response.maskedEmail)
         XCTAssertNil(response.maskedPhone)
     }
 
-    func testSignUpSMS() async throws {
+    func testSignUpWithPhone() async throws {
         let descope = DescopeSDK.mock()
 
         MockHTTP.push(body: enchantedLinkPhonePayload) { request in
             XCTAssertEqual(request.httpMethod, "POST")
             XCTAssertEqual(request.url?.absoluteString ?? "", "https://api.descope.com/v1/auth/enchantedlink/signup/sms")
             let body = (try! JSONSerialization.jsonObject(with: request.httpBody ?? Data())) as! [String: Any]
-            XCTAssertEqual(body["loginId"] as? String, "foo")
+            XCTAssertEqual(body["loginId"] as? String, "+10000000000")
         }
 
-        let response = try await descope.enchantedLink.signUp(with: .sms, loginId: "foo", details: nil, redirectURL: nil)
+        let response = try await descope.enchantedLink.signUpWithPhone("+10000000000", details: nil, redirectURL: nil)
         XCTAssertEqual("link1", response.linkId)
         XCTAssertEqual("pending1", response.pendingRef)
-        XCTAssertNil(response.maskedEmail)
+        XCTAssertEqual("", response.maskedEmail)
         XCTAssertEqual("+1******890", response.maskedPhone)
-    }
-
-    func testSignUpWhatsAppNotSupported() async throws {
-        let descope = DescopeSDK.mock()
-        do {
-            _ = try await descope.enchantedLink.signUp(with: .whatsapp, loginId: "foo", details: nil, redirectURL: nil)
-            XCTFail("Expected an error to be thrown")
-        } catch {
-            XCTAssertEqual(error, .invalidArguments)
-        }
     }
 
     func testSignInEmail() async throws {
@@ -54,11 +44,11 @@ class TestEnchantedLink: XCTestCase {
             XCTAssertEqual(request.url?.absoluteString ?? "", "https://api.descope.com/v1/auth/enchantedlink/signin/email")
         }
 
-        let response = try await descope.enchantedLink.signIn(with: .email, loginId: "foo", redirectURL: nil, options: [])
+        let response = try await descope.enchantedLink.signIn(loginId: "foo", redirectURL: nil, options: [])
         XCTAssertEqual("a***@b.com", response.maskedEmail)
     }
 
-    func testSignInSMS() async throws {
+    func testSignInWithPhone() async throws {
         let descope = DescopeSDK.mock()
 
         MockHTTP.push(body: enchantedLinkPhonePayload) { request in
@@ -66,11 +56,11 @@ class TestEnchantedLink: XCTestCase {
             XCTAssertEqual(request.url?.absoluteString ?? "", "https://api.descope.com/v1/auth/enchantedlink/signin/sms")
         }
 
-        let response = try await descope.enchantedLink.signIn(with: .sms, loginId: "foo", redirectURL: nil, options: [])
+        let response = try await descope.enchantedLink.signInWithPhone("+10000000000", redirectURL: nil, options: [])
         XCTAssertEqual("+1******890", response.maskedPhone)
     }
 
-    func testSignUpOrInSMS() async throws {
+    func testSignUpOrInWithPhone() async throws {
         let descope = DescopeSDK.mock()
 
         MockHTTP.push(body: enchantedLinkPhonePayload) { request in
@@ -78,7 +68,7 @@ class TestEnchantedLink: XCTestCase {
             XCTAssertEqual(request.url?.absoluteString ?? "", "https://api.descope.com/v1/auth/enchantedlink/signup-in/sms")
         }
 
-        let response = try await descope.enchantedLink.signUpOrIn(with: .sms, loginId: "foo", redirectURL: nil, options: [])
+        let response = try await descope.enchantedLink.signUpOrInWithPhone("+10000000000", redirectURL: nil, options: [])
         XCTAssertEqual("+1******890", response.maskedPhone)
     }
 }

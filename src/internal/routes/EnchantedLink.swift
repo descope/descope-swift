@@ -10,18 +10,32 @@ final class EnchantedLink: DescopeEnchantedLink, Route {
         self.client = client
     }
     
-    func signUp(with method: DeliveryMethod, loginId: String, details: SignUpDetails?, redirectURL: String?) async throws(DescopeError) -> EnchantedLinkResponse {
-        return try await client.enchantedLinkSignUp(with: method, loginId: loginId, details: details, redirectURL: redirectURL).convert()
+    func signUp(loginId: String, details: SignUpDetails?, redirectURL: String?) async throws(DescopeError) -> EnchantedLinkResponse {
+        return try await client.enchantedLinkSignUp(loginId: loginId, details: details, redirectURL: redirectURL).convert()
     }
 
-    func signIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse {
-        let (refreshJwt, loginOptions) = try options.convert()
-        return try await client.enchantedLinkSignIn(with: method, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
+    func signUpWithPhone(_ phone: String, details: SignUpDetails?, redirectURL: String?) async throws(DescopeError) -> EnchantedLinkResponse {
+        return try await client.enchantedLinkSignUpWithPhone(phone, details: details, redirectURL: redirectURL).convert()
     }
 
-    func signUpOrIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse {
+    func signIn(loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse {
         let (refreshJwt, loginOptions) = try options.convert()
-        return try await client.enchantedLinkSignUpOrIn(with: method, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
+        return try await client.enchantedLinkSignIn(loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
+    }
+
+    func signInWithPhone(_ phone: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse {
+        let (refreshJwt, loginOptions) = try options.convert()
+        return try await client.enchantedLinkSignInWithPhone(phone, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
+    }
+
+    func signUpOrIn(loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse {
+        let (refreshJwt, loginOptions) = try options.convert()
+        return try await client.enchantedLinkSignUpOrIn(loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
+    }
+
+    func signUpOrInWithPhone(_ phone: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse {
+        let (refreshJwt, loginOptions) = try options.convert()
+        return try await client.enchantedLinkSignUpOrInWithPhone(phone, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
     }
     
     func updateEmail(_ email: String, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions) async throws(DescopeError) -> EnchantedLinkResponse {
@@ -73,6 +87,6 @@ final class EnchantedLink: DescopeEnchantedLink, Route {
 
 private extension DescopeClient.EnchantedLinkResponse {
     func convert() -> EnchantedLinkResponse {
-        return EnchantedLinkResponse(linkId: linkId, pendingRef: pendingRef, maskedEmail: maskedEmail, maskedPhone: maskedPhone)
+        return EnchantedLinkResponse(linkId: linkId, pendingRef: pendingRef, maskedEmail: maskedEmail ?? "", maskedPhone: maskedPhone)
     }
 }
