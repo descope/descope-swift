@@ -254,27 +254,28 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
     struct EnchantedLinkResponse: JSONResponse {
         var linkId: String
         var pendingRef: String
-        var maskedEmail: String
+        var maskedEmail: String?
+        var maskedPhone: String?
     }
     
-    func enchantedLinkSignUp(loginId: String, details: SignUpDetails?, redirectURL: String?) async throws(DescopeError) -> EnchantedLinkResponse {
-        return try await post("auth/enchantedlink/signup/email", body: [
+    func enchantedLinkSignUp(with method: DeliveryMethod, loginId: String, details: SignUpDetails?, redirectURL: String?) async throws(DescopeError) -> EnchantedLinkResponse {
+        return try await post("auth/enchantedlink/signup/\(method.rawValue)", body: [
             "loginId": loginId,
             "user": details?.dictValue,
             "redirectUrl": redirectURL,
         ])
     }
     
-    func enchantedLinkSignIn(loginId: String, redirectURL: String?, refreshJwt: String?, options: LoginOptions?) async throws(DescopeError) -> EnchantedLinkResponse {
-        try await post("auth/enchantedlink/signin/email", headers: authorization(with: refreshJwt), body: [
+    func enchantedLinkSignIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, refreshJwt: String?, options: LoginOptions?) async throws(DescopeError) -> EnchantedLinkResponse {
+        return try await post("auth/enchantedlink/signin/\(method.rawValue)", headers: authorization(with: refreshJwt), body: [
             "loginId": loginId,
             "redirectUrl": redirectURL,
             "loginOptions": options?.dictValue,
         ])
     }
     
-    func enchantedLinkSignUpOrIn(loginId: String, redirectURL: String?, refreshJwt: String?, options: LoginOptions?) async throws(DescopeError) -> EnchantedLinkResponse {
-        try await post("auth/enchantedlink/signup-in/email", headers: authorization(with: refreshJwt), body: [
+    func enchantedLinkSignUpOrIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, refreshJwt: String?, options: LoginOptions?) async throws(DescopeError) -> EnchantedLinkResponse {
+        return try await post("auth/enchantedlink/signup-in/\(method.rawValue)", headers: authorization(with: refreshJwt), body: [
             "loginId": loginId,
             "redirectUrl": redirectURL,
             "loginOptions": options?.dictValue,
@@ -291,6 +292,16 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         ])
     }
     
+    func enchantedLinkUpdatePhone(_ phone: String, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions) async throws(DescopeError) -> EnchantedLinkResponse {
+        return try await post("auth/enchantedlink/update/phone/sms", headers: authorization(with: refreshJwt), body: [
+            "loginId": loginId,
+            "phone": phone,
+            "redirectUrl": redirectURL,
+            "addToLoginIDs": options.contains(.addToLoginIds),
+            "onMergeUseExisting": options.contains(.onMergeUseExisting),
+        ])
+    }
+
     func enchantedLinkPendingSession(pendingRef: String) async throws(DescopeError) -> JWTResponse {
         return try await post("auth/enchantedlink/pending-session", body: [
             "pendingRef": pendingRef,
