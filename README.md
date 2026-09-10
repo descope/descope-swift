@@ -285,13 +285,13 @@ let response = try await Descope.enchantedLink.signUpOrIn(loginId: "andy@example
 let authResponse = try await Descope.enchantedLink.pollForSession(pendingRef: response.pendingRef, timeout: nil)
 ```
 
-The enchanted link can also be delivered by SMS, using `signUpWithPhone`,
-`signInWithPhone` and `signUpOrInWithPhone`. The login ID is a phone number, and these
-return a `PhoneEnchantedLinkResponse` carrying `maskedPhone` instead of `maskedEmail`.
-Only the correct link is sent in the text message, so the user has nothing to choose.
+The enchanted link can also be delivered by SMS, by passing a `DeliveryMethod`. The
+login ID is a phone number, and the returned `EnchantedLinkDeliveryResponse` carries
+`maskedPhone` instead of `maskedEmail`. Only the correct link is sent in the text
+message, so the user has nothing to choose.
 
 ```swift
-let response = try await Descope.enchantedLink.signUpOrInWithPhone("+15551234567", redirectURL: nil, options: [])
+let response = try await Descope.enchantedLink.signUpOrIn(with: .sms, loginId: "+15551234567", redirectURL: nil, options: [])
 let authResponse = try await Descope.enchantedLink.pollForSession(pendingRef: response.pendingRef, timeout: nil)
 ```
 
