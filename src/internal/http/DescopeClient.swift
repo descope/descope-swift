@@ -259,7 +259,6 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
     }
     
     func enchantedLinkSignUp(with method: DeliveryMethod, loginId: String, details: SignUpDetails?, redirectURL: String?) async throws(DescopeError) -> EnchantedLinkResponse {
-        try method.ensureEnchantedLinkMethod()
         return try await post("auth/enchantedlink/signup/\(method.rawValue)", body: [
             "loginId": loginId,
             "user": details?.dictValue,
@@ -268,7 +267,6 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
     }
     
     func enchantedLinkSignIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, refreshJwt: String?, options: LoginOptions?) async throws(DescopeError) -> EnchantedLinkResponse {
-        try method.ensureEnchantedLinkMethod()
         return try await post("auth/enchantedlink/signin/\(method.rawValue)", headers: authorization(with: refreshJwt), body: [
             "loginId": loginId,
             "redirectUrl": redirectURL,
@@ -277,7 +275,6 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
     }
     
     func enchantedLinkSignUpOrIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, refreshJwt: String?, options: LoginOptions?) async throws(DescopeError) -> EnchantedLinkResponse {
-        try method.ensureEnchantedLinkMethod()
         return try await post("auth/enchantedlink/signup-in/\(method.rawValue)", headers: authorization(with: refreshJwt), body: [
             "loginId": loginId,
             "redirectUrl": redirectURL,
@@ -648,12 +645,6 @@ private extension DeliveryMethod {
     func ensurePhoneMethod() throws(DescopeError) {
         if self != .sms && self != .whatsapp {
             throw DescopeError.invalidArguments.with(message: "Update phone can be done using SMS or WhatsApp only")
-        }
-    }
-    
-    func ensureEnchantedLinkMethod() throws(DescopeError) {
-        if self != .email && self != .sms {
-            throw DescopeError.invalidArguments.with(message: "Enchanted link can be sent using email or SMS only")
         }
     }
 }

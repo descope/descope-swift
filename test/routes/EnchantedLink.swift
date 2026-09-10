@@ -122,33 +122,6 @@ class TestEnchantedLink: XCTestCase {
         XCTAssertEqual("+1******890", response.maskedPhone)
     }
 
-    func testWhatsAppMethodIsRejected() async throws {
-        let descope = DescopeSDK.mock()
-
-        do {
-            _ = try await descope.enchantedLink.signUpOrIn(with: .whatsapp, loginId: "+15551234567", redirectURL: nil, options: [])
-            XCTFail("No error thrown")
-        } catch .invalidArguments {
-            // ok, and no mock response was consumed
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
-    }
-
-    func testMissingMaskedPhoneFailsToDecode() async throws {
-        let descope = DescopeSDK.mock()
-
-        do {
-            MockHTTP.push(body: emailPayload)
-            _ = try await descope.enchantedLink.signUpOrIn(with: .sms, loginId: "+15551234567", redirectURL: nil, options: [])
-            XCTFail("No error thrown")
-        } catch DescopeError.decodeError {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
-    }
-
     func testUpdateEmail() async throws {
         let descope = DescopeSDK.mock()
 

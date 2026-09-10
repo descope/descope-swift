@@ -11,25 +11,25 @@ final class EnchantedLink: DescopeEnchantedLink, Route {
     }
     
     func signUp(with method: DeliveryMethod, loginId: String, details: SignUpDetails?, redirectURL: String?) async throws(DescopeError) -> EnchantedLinkResponse {
-        return try await client.enchantedLinkSignUp(with: method, loginId: loginId, details: details, redirectURL: redirectURL).convert(deliveredBy: method)
+        return try await client.enchantedLinkSignUp(with: method, loginId: loginId, details: details, redirectURL: redirectURL).convert()
     }
     
     func signIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse {
         let (refreshJwt, loginOptions) = try options.convert()
-        return try await client.enchantedLinkSignIn(with: method, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert(deliveredBy: method)
+        return try await client.enchantedLinkSignIn(with: method, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
     }
     
     func signUpOrIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse {
         let (refreshJwt, loginOptions) = try options.convert()
-        return try await client.enchantedLinkSignUpOrIn(with: method, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert(deliveredBy: method)
+        return try await client.enchantedLinkSignUpOrIn(with: method, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
     }
     
     func updateEmail(_ email: String, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions) async throws(DescopeError) -> EnchantedLinkResponse {
-        return try await client.enchantedLinkUpdateEmail(email, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: options).convert(deliveredBy: .email)
+        return try await client.enchantedLinkUpdateEmail(email, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: options).convert()
     }
     
     func updatePhone(_ phone: String, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions) async throws(DescopeError) -> EnchantedLinkResponse {
-        return try await client.enchantedLinkUpdatePhone(phone, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: options).convert(deliveredBy: .sms)
+        return try await client.enchantedLinkUpdatePhone(phone, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: options).convert()
     }
     
     func checkForSession(pendingRef: String) async throws(DescopeError) -> AuthenticationResponse {
@@ -76,12 +76,7 @@ final class EnchantedLink: DescopeEnchantedLink, Route {
 }
 
 private extension DescopeClient.EnchantedLinkResponse {
-    func convert(deliveredBy method: DeliveryMethod) throws(DescopeError) -> EnchantedLinkResponse {
-        if method == .email {
-            guard let maskedEmail else { throw DescopeError.decodeError.with(message: "Missing masked email") }
-            return EnchantedLinkResponse(linkId: linkId, pendingRef: pendingRef, maskedEmail: maskedEmail)
-        }
-        guard let maskedPhone else { throw DescopeError.decodeError.with(message: "Missing masked phone") }
-        return EnchantedLinkResponse(linkId: linkId, pendingRef: pendingRef, maskedPhone: maskedPhone)
+    func convert() -> EnchantedLinkResponse {
+        return EnchantedLinkResponse(linkId: linkId, pendingRef: pendingRef, maskedEmail: maskedEmail, maskedPhone: maskedPhone)
     }
 }
