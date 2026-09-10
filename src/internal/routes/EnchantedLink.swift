@@ -11,39 +11,39 @@ final class EnchantedLink: DescopeEnchantedLink, Route {
     }
     
     func signUp(loginId: String, details: SignUpDetails?, redirectURL: String?) async throws(DescopeError) -> EnchantedLinkResponse {
-        return try await client.enchantedLinkSignUp(loginId: loginId, details: details, redirectURL: redirectURL).convert()
+        return try await client.enchantedLinkSignUp(with: .email, loginId: loginId, details: details, redirectURL: redirectURL).convert()
     }
     
-    func signUpWithPhone(_ phone: String, details: SignUpDetails?, redirectURL: String?) async throws(DescopeError) -> PhoneEnchantedLinkResponse {
-        return try await client.enchantedLinkSignUpWithPhone(phone, details: details, redirectURL: redirectURL).convert()
+    func signUp(with method: DeliveryMethod, loginId: String, details: SignUpDetails?, redirectURL: String?) async throws(DescopeError) -> EnchantedLinkDeliveryResponse {
+        return try await client.enchantedLinkSignUp(with: method, loginId: loginId, details: details, redirectURL: redirectURL).convert(deliveredBy: method)
     }
     
     func signIn(loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse {
         let (refreshJwt, loginOptions) = try options.convert()
-        return try await client.enchantedLinkSignIn(loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
+        return try await client.enchantedLinkSignIn(with: .email, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
     }
     
-    func signInWithPhone(_ phone: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> PhoneEnchantedLinkResponse {
+    func signIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkDeliveryResponse {
         let (refreshJwt, loginOptions) = try options.convert()
-        return try await client.enchantedLinkSignInWithPhone(phone, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
+        return try await client.enchantedLinkSignIn(with: method, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert(deliveredBy: method)
     }
     
     func signUpOrIn(loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse {
         let (refreshJwt, loginOptions) = try options.convert()
-        return try await client.enchantedLinkSignUpOrIn(loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
+        return try await client.enchantedLinkSignUpOrIn(with: .email, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
     }
     
-    func signUpOrInWithPhone(_ phone: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> PhoneEnchantedLinkResponse {
+    func signUpOrIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkDeliveryResponse {
         let (refreshJwt, loginOptions) = try options.convert()
-        return try await client.enchantedLinkSignUpOrInWithPhone(phone, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert()
+        return try await client.enchantedLinkSignUpOrIn(with: method, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: loginOptions).convert(deliveredBy: method)
     }
     
     func updateEmail(_ email: String, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions) async throws(DescopeError) -> EnchantedLinkResponse {
         return try await client.enchantedLinkUpdateEmail(email, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: options).convert()
     }
     
-    func updatePhone(_ phone: String, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions) async throws(DescopeError) -> PhoneEnchantedLinkResponse {
-        return try await client.enchantedLinkUpdatePhone(phone, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: options).convert()
+    func updatePhone(_ phone: String, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions) async throws(DescopeError) -> EnchantedLinkDeliveryResponse {
+        return try await client.enchantedLinkUpdatePhone(phone, loginId: loginId, redirectURL: redirectURL, refreshJwt: refreshJwt, options: options).convert(deliveredBy: .sms)
     }
     
     func checkForSession(pendingRef: String) async throws(DescopeError) -> AuthenticationResponse {
@@ -90,13 +90,17 @@ final class EnchantedLink: DescopeEnchantedLink, Route {
 }
 
 private extension DescopeClient.EnchantedLinkResponse {
-    func convert() -> EnchantedLinkResponse {
+    func convert() throws(DescopeError) -> EnchantedLinkResponse {
+        guard let maskedEmail else { throw DescopeError.decodeError.with(message: "Missing masked email") }
         return EnchantedLinkResponse(linkId: linkId, pendingRef: pendingRef, maskedEmail: maskedEmail)
     }
-}
-
-private extension DescopeClient.PhoneEnchantedLinkResponse {
-    func convert() -> PhoneEnchantedLinkResponse {
-        return PhoneEnchantedLinkResponse(linkId: linkId, pendingRef: pendingRef, maskedPhone: maskedPhone)
+    
+    func convert(deliveredBy method: DeliveryMethod) throws(DescopeError) -> EnchantedLinkDeliveryResponse {
+        if method == .email {
+            guard let maskedEmail else { throw DescopeError.decodeError.with(message: "Missing masked email") }
+            return EnchantedLinkDeliveryResponse(linkId: linkId, pendingRef: pendingRef, maskedEmail: maskedEmail)
+        }
+        guard let maskedPhone else { throw DescopeError.decodeError.with(message: "Missing masked phone") }
+        return EnchantedLinkDeliveryResponse(linkId: linkId, pendingRef: pendingRef, maskedPhone: maskedPhone)
     }
 }
