@@ -276,19 +276,18 @@ let authResponse = try await Descope.magiclink.verify(token: "<token>")
 
 ### Enchanted Link
 
-Send a user an Enchanted Link over email. The email contains three links, and the
-returned `linkId` tells the user which one to press. Use the `pendingRef` to poll
-until they do.
+Send a user an Enchanted Link over email or SMS. The email contains three links, and
+the returned `linkId` tells the user which one to press. Use the `pendingRef` to poll
+until they do. The response carries `maskedEmail`.
 
 ```swift
-let response = try await Descope.enchantedLink.signUpOrIn(loginId: "andy@example.com", redirectURL: nil, options: [])
+let response = try await Descope.enchantedLink.signUpOrIn(with: .email, loginId: "andy@example.com", redirectURL: nil, options: [])
 let authResponse = try await Descope.enchantedLink.pollForSession(pendingRef: response.pendingRef, timeout: nil)
 ```
 
-The enchanted link can also be delivered by SMS, by passing a `DeliveryMethod`. The
-login ID is a phone number, and the returned `EnchantedLinkDeliveryResponse` carries
-`maskedPhone` instead of `maskedEmail`. Only the correct link is sent in the text
-message, so the user has nothing to choose.
+For SMS delivery the login ID is a phone number and the response carries `maskedPhone`
+instead. Only the correct link is sent in the text message, so the user has nothing
+to choose.
 
 ```swift
 let response = try await Descope.enchantedLink.signUpOrIn(with: .sms, loginId: "+15551234567", redirectURL: nil, options: [])

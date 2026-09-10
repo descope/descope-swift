@@ -56,7 +56,6 @@ on the [Descope website](https://descope.com).
 - ``AuthenticationResponse``
 - ``RefreshResponse``
 - ``EnchantedLinkResponse``
-- ``EnchantedLinkDeliveryResponse``
 - ``TOTPResponse``
 - ``PasswordPolicyResponse``
 
