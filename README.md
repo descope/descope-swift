@@ -148,6 +148,53 @@ If you also want to remove the user's refresh JWT from the Descope servers
 once it becomes redundant you can call the `Descope.auth.revokeSessions()`
 function. See its documentation for more details.
 
+## Session Storage
+
+DescopeKit uses a pluggable session storage system defined by `DescopeSessionStorage`. By default, authenticated sessions are stored securely in the system keychain and automatically restored when the application restarts.
+
+## Customizing Keychain Storage
+
+The default session storage uses a keychain-backed store. You can customize its behavior by configuring a `SessionStorage.KeychainStore`.
+
+```swift
+let keychainStore = SessionStorage.KeychainStore()
+keychainStore.accessibility = kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String
+keychainStore.service = "com.descope.DescopeKit"
+keychainStore.label = "DescopeSession"
+
+let storage = SessionStorage(
+projectId: "<Your-Project-Id>",
+store: keychainStore
+)
+
+Descope.sessionManager = DescopeSessionManager(storage: storage)
+```
+
+### Sharing sessions between app and extensions
+
+To share sessions between an app and its extensions, configure a keychain access group:
+
+```swift
+keychainStore.accessGroup = "group.com.example.myapp"
+```
+
+> Important: Changing the `service`, `label`, or `accessGroup` values in an app update will cause previously stored sessions to be lost and users will need to sign in again.
+
+## App Launch and Background Considerations
+
+On iOS, the default keychain accessibility (`kSecAttrAccessibleAfterFirstUnlock`) means sessions are available only after the device has been unlocked at least once following a restart.
+
+In rare cases (for example, background launches triggered by Bluetooth,
+push notifications, or app extensions), the app may start before the keychain
+is accessible. In such scenarios:
+
+- The session may appear temporarily unavailable
+- This should not be treated as an explicit logout
+- The session may become available later in the app lifecycle
+
+If your application requires different behavior, consider customizing the
+keychain accessibility level.
+
 ## Flows
 
 We can authenticate users by building and running Flows. Flows are built in the Descope 
