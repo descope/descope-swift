@@ -78,9 +78,7 @@ on the [Descope website](https://descope.com).
 - ``DescopeSDK``
 - ``DescopeTenant``
 - ``DescopeToken``
-- ``DescopeSessionLifecycle``
 - ``DescopeSessionStorage``
-- ``SessionLifecycle``
 - ``SessionStorage``
 
 ### Deprecated

@@ -155,7 +155,6 @@ public extension DescopeSDK {
 private extension DescopeSessionManager {
     convenience init(sdk: DescopeSDK) {
         let storage = SessionStorage(projectId: sdk.config.projectId, store: .keychain)
-        let lifecycle = SessionLifecycle(auth: sdk.auth, config: sdk.config)
-        self.init(storage: storage, lifecycle: lifecycle)
+        self.init(storage: storage, auth: sdk.auth, config: sdk.config)
     }
 }
