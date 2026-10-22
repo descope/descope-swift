@@ -353,69 +353,85 @@ public protocol DescopeMagicLink: Sendable {
 /// verified via said webpage. To learn more consult the
 /// official Descope docs.
 public protocol DescopeEnchantedLink: Sendable {
-    /// Authenticates a new user using an enchanted link, sent via email.
+    /// Authenticates a new user using an enchanted link, sent via a delivery
+    /// method of choice.
     ///
-    /// The caller should use the returned ``EnchantedLinkResponse`` object to show the
-    /// user which link they need to press in the enchanted link email, and then use
-    /// the `pendingRef` value to poll until the authentication is verified.
+    /// Enchanted links are delivered over `email` or `sms` only.
     ///
-    /// - Important: Make sure an email address is provided via
-    ///     the `details` parameter or as the `loginId` itself.
+    /// The caller should use the returned ``EnchantedLinkResponse`` object to show
+    /// the user which link they need to press, and then use the `pendingRef` value to poll
+    /// until the authentication is verified.
+    ///
+    /// - Important: Make sure the delivery information corresponding with
+    ///     the delivery method is given either in the `details` parameter or as
+    ///     the `loginId` itself, i.e., the email address or phone number.
     ///
     /// - Important: Make sure a default Enchanted Link URL is configured
     ///     in the Descope console, or provided by this call.
     ///
     /// - Parameters:
+    ///   - method: Deliver the enchanted link using this delivery method.
     ///   - loginId: What identifies the user when logging in, typically
-    ///     an email, phone, or any other unique identifier.
+    ///     an email address or a phone number.
     ///   - details: Optional details about the user signing up.
     ///   - redirectURL: Optional URL that will be used to generate the magic link.
     ///     If not given, the project default will be used.
     ///
     /// - Returns: An ``EnchantedLinkResponse`` object with the `linkId` to show the
     ///     user and `pendingRef` for polling for the session.
-    func signUp(loginId: String, details: SignUpDetails?, redirectURL: String?) async throws(DescopeError) -> EnchantedLinkResponse
+    func signUp(with method: DeliveryMethod, loginId: String, details: SignUpDetails?, redirectURL: String?) async throws(DescopeError) -> EnchantedLinkResponse
     
-    /// Authenticates an existing user using an enchanted link, sent via email.
+    /// Authenticates an existing user using an enchanted link, sent via a delivery
+    /// method of choice.
     ///
-    /// The caller should use the returned ``EnchantedLinkResponse`` object to show the
-    /// user which link they need to press in the enchanted link email, and then use
-    /// the `pendingRef` value to poll until the authentication is verified.
+    /// Enchanted links are delivered over `email` or `sms` only.
+    ///
+    /// The caller should use the returned ``EnchantedLinkResponse`` object to show
+    /// the user which link they need to press, and then use the `pendingRef` value to poll
+    /// until the authentication is verified.
+    ///
+    /// - Important: Make sure the delivery information corresponding with
+    ///     the delivery method already exists on the user trying to log in,
+    ///     i.e., the email address or phone number.
     ///
     /// - Important: Make sure a default Enchanted link URL is configured
     ///     in the Descope console, or provided by this call.
     ///
     /// - Parameters:
+    ///   - method: Deliver the enchanted link using this delivery method.
     ///   - loginId: What identifies the user when logging in, typically
-    ///     an email, phone, or any other unique identifier.
+    ///     an email address or a phone number.
     ///   - redirectURL: Optional URL that will be used to generate the magic link.
     ///     If not given, the project default will be used.
     ///   - options: Additional behaviors to perform during authentication.
     ///
     /// - Returns: An ``EnchantedLinkResponse`` object with the `linkId` to show the
     ///     user and `pendingRef` for polling for the session.
-    func signIn(loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse
+    func signIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse
     
     /// Authenticates an existing user if one exists, or create a new user using an
-    /// enchanted link, sent via email.
+    /// enchanted link, sent via a delivery method of choice.
     ///
-    /// The caller should use the returned ``EnchantedLinkResponse`` object to show the
-    /// user which link they need to press in the enchanted link email, and then use
-    /// the `pendingRef` value to poll until the authentication is verified.
+    /// Enchanted links are delivered over `email` or `sms` only.
+    ///
+    /// The caller should use the returned ``EnchantedLinkResponse`` object to show
+    /// the user which link they need to press, and then use the `pendingRef` value to poll
+    /// until the authentication is verified.
     ///
     /// - Important: Make sure a default Enchanted link URL is configured
     ///     in the Descope console, or provided by this call.
     ///
     /// - Parameters:
+    ///   - method: Deliver the enchanted link using this delivery method.
     ///   - loginId: What identifies the user when logging in, typically
-    ///     an email, phone, or any other unique identifier.
+    ///     an email address or a phone number.
     ///   - redirectURL: Optional URL that will be used to generate the magic link.
     ///     If not given, the project default will be used.
     ///   - options: Additional behaviors to perform during authentication.
     ///
     /// - Returns: An ``EnchantedLinkResponse`` object with the `linkId` to show the
     ///     user and `pendingRef` for polling for the session.
-    func signUpOrIn(loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse
+    func signUpOrIn(with method: DeliveryMethod, loginId: String, redirectURL: String?, options: [SignInOptions]) async throws(DescopeError) -> EnchantedLinkResponse
     
     /// Updates an existing user by adding an email address.
     ///
@@ -440,6 +456,30 @@ public protocol DescopeEnchantedLink: Sendable {
     /// - Returns: An ``EnchantedLinkResponse`` object with the `linkId` to show the
     ///     user and `pendingRef` for polling for the session.
     func updateEmail(_ email: String, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions) async throws(DescopeError) -> EnchantedLinkResponse
+    
+    /// Updates an existing user by adding a phone number.
+    ///
+    /// The phone number will be updated after it is verified via enchanted link. In order
+    /// to do this, the user must have an active ``DescopeSession`` whose `refreshJwt` should
+    /// be passed as a parameter to this function.
+    ///
+    /// The caller should use the returned ``EnchantedLinkResponse`` object to show the
+    /// user which link they need to press in the enchanted link text message, and then use
+    /// the `pendingRef` value to poll until the authentication is verified.
+    ///
+    /// - Parameters:
+    ///   - phone: The phone number to add.
+    ///   - loginId: The existing user's loginId
+    ///   - redirectURL: Optional URL that will be used to generate the magic link.
+    ///     If not given, the project default will be used.
+    ///   - refreshJwt: The existing user's `refreshJwt` from an active ``DescopeSession``.
+    ///   - options: Whether to add the new phone number as a loginId for the updated user, and
+    ///     in that case, if another user already has the same phone number as a loginId how to
+    ///     merge the two users. See the documentation for ``UpdateOptions`` for more details.
+    ///
+    /// - Returns: An ``EnchantedLinkResponse`` object with the `linkId` to show the
+    ///     user and `pendingRef` for polling for the session.
+    func updatePhone(_ phone: String, loginId: String, redirectURL: String?, refreshJwt: String, options: UpdateOptions) async throws(DescopeError) -> EnchantedLinkResponse
     
     /// Checks if an enchanted link authentication has been verified by the user.
     ///

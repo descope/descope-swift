@@ -274,6 +274,30 @@ on the token (`t`) parameter (`https://your-redirect-address.com/verify?t=<token
 let authResponse = try await Descope.magiclink.verify(token: "<token>")
 ```
 
+### Enchanted Link
+
+Send a user an Enchanted Link over email or SMS. The email contains three links, and
+the returned `linkId` tells the user which one to press. Use the `pendingRef` to poll
+until they do. The response carries `maskedEmail`.
+
+```swift
+let response = try await Descope.enchantedLink.signUpOrIn(with: .email, loginId: "andy@example.com", redirectURL: nil, options: [])
+let authResponse = try await Descope.enchantedLink.pollForSession(pendingRef: response.pendingRef, timeout: nil)
+```
+
+For SMS delivery the login ID is a phone number and the response carries `maskedPhone`
+instead. Only the correct link is sent in the text message, so the user has nothing
+to choose.
+
+```swift
+let response = try await Descope.enchantedLink.signUpOrIn(with: .sms, loginId: "+15551234567", redirectURL: nil, options: [])
+let authResponse = try await Descope.enchantedLink.pollForSession(pendingRef: response.pendingRef, timeout: nil)
+```
+
+`updatePhone(_:loginId:redirectURL:refreshJwt:options:)` adds a phone number to an
+existing user, verified by an enchanted link sent over SMS, using the `refreshJwt` of
+their active session.
+
 ### OAuth
 
 When a user wants to use social login with Apple you can leverage the [Sign in with Apple](https://developer.apple.com/sign-in-with-apple/)

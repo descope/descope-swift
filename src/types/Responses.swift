@@ -23,14 +23,16 @@ public struct RefreshResponse: Sendable {
 /// Returned from calls that start an enchanted link flow.
 ///
 /// The ``linkId`` value needs to be displayed to the user so they know which
-/// link should be clicked on in the enchanted link email. The ``maskedEmail``
-/// field can also be shown to inform the user to which address the email
-/// was sent. The ``pendingRef`` field is used to poll the server for the
-/// enchanted link flow result.
+/// link should be clicked on in the enchanted link email or text message. The
+/// ``maskedEmail`` or ``maskedPhone`` field matching the delivery method used
+/// can also be shown to inform the user where the link was sent. The
+/// ``pendingRef`` field is used to poll the server for the enchanted link
+/// flow result.
 public struct EnchantedLinkResponse: Sendable {
     public var linkId: String
     public var pendingRef: String
-    public var maskedEmail: String
+    public var maskedEmail: String?
+    public var maskedPhone: String?
 }
 
 /// Returned from TOTP calls that create a new seed.
