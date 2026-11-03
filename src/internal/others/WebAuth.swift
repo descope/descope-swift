@@ -26,11 +26,19 @@ private func presentWebAuthentication(url: URL, accessSharedUserData: Bool, logg
 
     let result: Result<URL?, Error> = await withTaskCancellationHandler {
         return await withCheckedContinuation { continuation in
-            let session = ASWebAuthenticationSession(url: url, callbackURLScheme: WebAuth.redirectScheme) { callbackURL, error in
+            // the session's completion handler might be called more than once, e.g., from
+            // both the redirect and dismiss paths, so we ensure the continuation is only
+            // resumed the first time to prevent a crash
+            let resumer = SingleResumer(continuation)
+            let session = ASWebAuthenticationSession(url: url, callbackURLScheme: WebAuth.redirectScheme) { @Sendable callbackURL, error in
+                let resumed: Bool
                 if let error {
-                    continuation.resume(returning: .failure(error))
+                    resumed = resumer.resume(returning: .failure(error))
                 } else {
-                    continuation.resume(returning: .success(callbackURL))
+                    resumed = resumer.resume(returning: .success(callbackURL))
+                }
+                if !resumed {
+                    logger.debug("Skipping repeated web authentication completion")
                 }
             }
 
@@ -71,6 +79,28 @@ private func presentWebAuthentication(url: URL, accessSharedUserData: Bool, logg
 @MainActor
 private final class CancellationWrapper {
     var closure: @MainActor () -> Void = {}
+}
+
+/// Wraps a continuation so it's resumed at most once, ignoring any later calls.
+final class SingleResumer<T: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<T, Never>?
+
+    init(_ continuation: CheckedContinuation<T, Never>) {
+        self.continuation = continuation
+    }
+
+    /// Resumes the continuation if it wasn't resumed already, and returns whether it was resumed by this call.
+    @discardableResult
+    func resume(returning value: T) -> Bool {
+        lock.lock()
+        let continuation = self.continuation
+        self.continuation = nil
+        lock.unlock()
+        guard let continuation else { return false }
+        continuation.resume(returning: value)
+        return true
+    }
 }
 
 private func parseExchangeCode(from callbackURL: URL?) throws(DescopeError) -> String {
