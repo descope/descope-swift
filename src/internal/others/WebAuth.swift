@@ -26,9 +26,7 @@ private func presentWebAuthentication(url: URL, accessSharedUserData: Bool, logg
 
     let result: Result<URL?, Error> = await withTaskCancellationHandler {
         return await withCheckedContinuation { continuation in
-            // the session's completion handler might be called more than once, e.g., from
-            // both the redirect and dismiss paths, so we ensure the continuation is only
-            // resumed the first time to prevent a crash
+            // iOS can call the completion handler more than once, e.g., from both the redirect and dismiss paths
             let resumer = SingleResumer(continuation)
             let session = ASWebAuthenticationSession(url: url, callbackURLScheme: WebAuth.redirectScheme) { @Sendable callbackURL, error in
                 let resumed: Bool
@@ -81,8 +79,7 @@ private final class CancellationWrapper {
     var closure: @MainActor () -> Void = {}
 }
 
-/// Wraps a continuation so it's resumed at most once, ignoring any later calls.
-final class SingleResumer<T: Sendable>: @unchecked Sendable {
+private final class SingleResumer<T: Sendable>: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<T, Never>?
 
@@ -90,8 +87,6 @@ final class SingleResumer<T: Sendable>: @unchecked Sendable {
         self.continuation = continuation
     }
 
-    /// Resumes the continuation if it wasn't resumed already, and returns whether it was resumed by this call.
-    @discardableResult
     func resume(returning value: T) -> Bool {
         lock.lock()
         let continuation = self.continuation
