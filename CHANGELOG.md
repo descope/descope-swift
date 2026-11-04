@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/descope/descope-swift/compare/0.12.0...0.12.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* **webauth:** resume web authentication continuation only once ([#162](https://github.com/descope/descope-swift/issues/162)) ([e1a45e3](https://github.com/descope/descope-swift/commit/e1a45e37604ff27c92728ec999e3e33afb24fa30))
+
 ## [0.12.0](https://github.com/descope/descope-swift/compare/0.11.2...0.12.0) (2026-10-19)
 
 
