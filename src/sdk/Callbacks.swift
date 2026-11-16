@@ -978,6 +978,16 @@ public extension DescopePush {
         }
     }
 
+    func enroll(deviceToken: Data, refreshJwt: String, completion: @escaping @Sendable (Result<Void, DescopeError>) -> Void) {
+        Task {
+            do throws(DescopeError) {
+                completion(.success(try await enroll(deviceToken: deviceToken, refreshJwt: refreshJwt)))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+
     func finish(transactionId: String, approved: Bool, refreshJwt: String, completion: @escaping @Sendable (Result<Void, DescopeError>) -> Void) {
         Task {
             do throws(DescopeError) {

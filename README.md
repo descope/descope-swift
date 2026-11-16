@@ -457,6 +457,83 @@ You can also trigger a password reset email to be sent to the user:
 try await Descope.password.sendReset(loginId: "andy@example.com", redirectURL: "appscheme://my-app.com/handle-reset")
 ```
 
+### Push Sign In and CIBA Approval
+
+Register the device for push once the user is signed in, and again after each sign in.
+The APNs environment (sandbox or production) is taken from the app's provisioning profile.
+
+```swift
+func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    guard let session = Descope.sessionManager.session else { return }
+    Task {
+        try await Descope.push.enroll(deviceToken: deviceToken, refreshJwt: session.refreshJwt)
+    }
+}
+```
+
+The same device can receive two kinds of Descope push notifications:
+
+- **Push sign-in** (`descope_sign_in`): someone is signing in as this user elsewhere and the
+  user approves or denies it. Read it with `signInRequest(from:session:)` and answer with
+  `finish(transactionId:approved:refreshJwt:)`. Approve only when the user is signing in
+  right now; deny anything unexpected.
+- **CIBA approval** (`descope_ciba`): an inbound app, such as an AI agent, asks the user to
+  approve a request. Read it with `cibaRequest(from:session:allowedHosts:)` and open the
+  request's flow, which shows the consent screen and approves or denies it with the user's session.
+
+Both return `nil` unless the notification is for the signed in user, so one handler can try
+them in turn and ignore anything else. The example below adds Approve and Deny buttons to push
+sign-in notifications. Approve requires the device to be unlocked, while Deny deliberately
+doesn't, so an unexpected request can be rejected from the lock screen.
+
+```swift
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        Descope.setup(projectId: "<Your-Project-Id>")
+
+        // Approve and Deny buttons on push sign-in notifications; include your app's own categories in this set
+        let approve = UNNotificationAction(identifier: "approve", title: "Approve", options: [.authenticationRequired])
+        let deny = UNNotificationAction(identifier: "deny", title: "Deny", options: [.destructive])
+        let signIn = UNNotificationCategory(identifier: DescopePushSignInRequest.category, actions: [approve, deny], intentIdentifiers: [])
+        UNUserNotificationCenter.current().setNotificationCategories([signIn])
+
+        // set before returning so a notification that launched the app is delivered
+        UNUserNotificationCenter.current().delegate = self
+        return true
+    }
+}
+
+extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        guard let session = Descope.sessionManager.session, !session.refreshToken.isExpired else { return }
+        let userInfo = response.notification.request.content.userInfo
+
+        if let request = Descope.push.signInRequest(from: userInfo, session: session) {
+            // a plain tap opens the app without an answer: show the request in your own UI and call finish from there
+            let action = response.actionIdentifier
+            guard action == "approve" || action == "deny" else { return }
+            do {
+                try await Descope.push.finish(transactionId: request.transactionId, approved: action == "approve", refreshJwt: session.refreshJwt)
+            } catch {
+                // the request expired or was already answered; the app may be in the background here,
+                // so tell the user with a local notification or the next time it opens
+            }
+        } else if let request = Descope.push.cibaRequest(from: userInfo, session: session, allowedHosts: []) {
+            // request.title and request.body describe what is being requested
+            let flowViewController = DescopeFlowViewController()
+            flowViewController.delegate = self // your DescopeFlowViewControllerDelegate, which dismisses it when the flow ends
+            flowViewController.start(flow: DescopeFlow(url: request.url))
+            // present flowViewController from your current view controller
+        }
+    }
+}
+```
+
+Never open a flow URL taken straight from a notification: the flow runs with the user's session.
+The host of the inbound app's CIBA login page URL must be the SDK's base URL host, or be passed
+in `allowedHosts`, for example when the login page is hosted on your own site.
+
 ## Support
 
 #### Contributing
