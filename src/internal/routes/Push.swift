@@ -95,7 +95,7 @@ enum APNsEnvironment {
     }
 
     private static func embeddedProvisioningProfile() -> Data? {
-        #if os(iOS)
+        #if os(iOS) && !targetEnvironment(macCatalyst)
         guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision") else { return nil }
         #else
         let url = Bundle.main.bundleURL.appendingPathComponent("Contents/embedded.provisionprofile")
