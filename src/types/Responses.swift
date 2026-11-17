@@ -12,6 +12,7 @@ public struct AuthenticationResponse: @unchecked Sendable {
     public var user: DescopeUser
     public var isFirstAuthentication: Bool
     public var flowOutput: [String: Any]
+    public var isExternalPasskey: Bool
 }
 
 /// Returned from the ``DescopeAuth/refreshSession(refreshJwt:)`` call.

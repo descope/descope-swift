@@ -48,6 +48,28 @@ class TestJWTResponse: XCTestCase {
         XCTAssertNil(authResponse.externalToken)
     }
 
+    func testExternalPasskey() async throws {
+        var data = Data(externalPasskeyPayload.utf8)
+        var jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
+        try jwtResponse.setValues(from: data, cookies: [], refreshCookieName: nil)
+        var authResponse: AuthenticationResponse = try jwtResponse.convert()
+        XCTAssertTrue(authResponse.isExternalPasskey)
+
+        let encoded = try JSONEncoder().encode(authResponse)
+        XCTAssertTrue(try JSONDecoder().decode(AuthenticationResponse.self, from: encoded).isExternalPasskey)
+
+        var object = try JSONSerialization.jsonObject(with: encoded) as! [String: Any]
+        object.removeValue(forKey: "isExternalPasskey")
+        let legacy = try JSONSerialization.data(withJSONObject: object)
+        XCTAssertFalse(try JSONDecoder().decode(AuthenticationResponse.self, from: legacy).isExternalPasskey)
+
+        data = Data(noExternalTokenPayload.utf8)
+        jwtResponse = try JSONDecoder().decode(DescopeClient.JWTResponse.self, from: data)
+        try jwtResponse.setValues(from: data, cookies: [], refreshCookieName: nil)
+        authResponse = try jwtResponse.convert()
+        XCTAssertFalse(authResponse.isExternalPasskey)
+    }
+
     func testFlowOutput() async throws {
         // with flow output
         var data = Data(flowOutputPayload.utf8)
@@ -155,6 +177,16 @@ private let flowOutputPayload = """
         "count": 3,
         "nested": { "inner": true }
     }
+}
+"""
+
+private let externalPasskeyPayload = """
+{
+    "sessionJwt": "\(sessionJwt)",
+    "refreshJwt": "\(refreshJwt)",
+    "user": \(userPayload),
+    "firstSeen": false,
+    "externalPasskey": true
 }
 """
 

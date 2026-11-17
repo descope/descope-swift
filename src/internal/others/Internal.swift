@@ -231,6 +231,7 @@ extension AuthenticationResponse: Codable {
         case user
         case isFirstAuthentication
         case flowOutput
+        case isExternalPasskey
     }
 
     public init(from decoder: Decoder) throws {
@@ -245,6 +246,7 @@ extension AuthenticationResponse: Codable {
         } else {
             flowOutput = [:]
         }
+        isExternalPasskey = try values.decodeIfPresent(Bool.self, forKey: .isExternalPasskey) ?? false
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -259,6 +261,7 @@ extension AuthenticationResponse: Codable {
             let value = String(bytes: data, encoding: .utf8)
             try values.encodeIfPresent(value, forKey: .flowOutput)
         }
+        try values.encode(isExternalPasskey, forKey: .isExternalPasskey)
     }
 }
 
