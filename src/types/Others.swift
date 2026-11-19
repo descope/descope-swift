@@ -147,3 +147,59 @@ public struct UpdateOptions: OptionSet, Sendable {
         self.rawValue = rawValue
     }
 }
+
+/// A CIBA approval request that Descope delivered to the device as a push notification.
+///
+/// Get one from a notification's `userInfo` with ``DescopePush/cibaRequest(from:session:allowedHosts:)``,
+/// show the user what is being requested, and open ``url`` in a ``DescopeFlow`` to approve or deny it.
+public struct DescopeCIBARequest: Sendable, Equatable {
+    /// The notification category Descope sets on CIBA push notifications.
+    public static let category = "descope_ciba"
+
+    /// The CIBA flow URL that approves or denies this request.
+    public var url: URL
+
+    /// The id of the user the request was sent to.
+    public var userId: String
+
+    /// The id of the Descope project that sent the request.
+    public var projectId: String
+
+    /// The notification title, as rendered by the server.
+    public var title: String?
+
+    /// The notification body, as rendered by the server: the client's binding message, or a
+    /// default sentence when the client didn't send one.
+    ///
+    /// Show it to the user before they approve, so they can match it with what the client displays.
+    public var body: String?
+
+    public init(url: URL, userId: String, projectId: String, title: String? = nil, body: String? = nil) {
+        self.url = url
+        self.userId = userId
+        self.projectId = projectId
+        self.title = title
+        self.body = body
+    }
+}
+
+/// A push sign-in request that Descope delivered to the device as a push notification.
+///
+/// Get one from a notification's `userInfo` with ``DescopePush/signInRequest(from:session:)``,
+/// ask the user whether they are signing in, and then call
+/// ``DescopePush/finish(transactionId:approved:refreshJwt:)`` with ``transactionId``.
+public struct DescopePushSignInRequest: Sendable, Equatable {
+    /// The notification category Descope sets on push sign-in notifications.
+    public static let category = "descope_sign_in"
+
+    /// The id of the push sign-in transaction to approve or deny.
+    public var transactionId: String
+
+    /// The id of the user the request was sent to.
+    public var userId: String
+
+    public init(transactionId: String, userId: String) {
+        self.transactionId = transactionId
+        self.userId = userId
+    }
+}
