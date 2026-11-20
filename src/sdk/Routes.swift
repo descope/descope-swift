@@ -503,6 +503,69 @@ public protocol DescopePush: Sendable {
     ///   - approved: Whether the authentication request is approved or denied.
     ///   - refreshJwt: The `refreshJwt` from an active ``DescopeSession``.
     func finish(transactionId: String, approved: Bool, refreshJwt: String) async throws(DescopeError)
+
+    /// Registers an APNs device token for push authentication and CIBA approval requests.
+    ///
+    /// Call this from `application(_:didRegisterForRemoteNotificationsWithDeviceToken:)`
+    /// whenever the user is signed in, and again after each sign in, since the token
+    /// is registered for the signed in user.
+    ///
+    /// The APNs environment is taken from the app's provisioning profile: development
+    /// signed builds and the simulator use the sandbox environment, and App Store,
+    /// TestFlight and ad hoc builds use production.
+    ///
+    /// - Parameters:
+    ///   - deviceToken: The device token passed to the app delegate by the system.
+    ///   - refreshJwt: The `refreshJwt` from an active ``DescopeSession``.
+    func enroll(deviceToken: Data, refreshJwt: String) async throws(DescopeError)
+
+    /// Reads a CIBA approval request from a push notification sent by Descope.
+    ///
+    /// Use it in `userNotificationCenter(_:didReceive:withCompletionHandler:)`. It returns `nil`
+    /// unless the notification is a Descope CIBA request for this project and for the user of
+    /// `session`, and its flow URL uses `https` on the host of the SDK's base URL or on one of
+    /// `allowedHosts`. The flow runs with the user's session, so never open a flow URL from a
+    /// notification without this check.
+    ///
+    /// It doesn't check whether the session is still valid, so check that before calling it,
+    /// and pass the returned ``DescopeCIBARequest/url`` to the flow rather than the raw string.
+    ///
+    ///     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+    ///         let userInfo = response.notification.request.content.userInfo
+    ///         guard let session = Descope.sessionManager.session else { return }
+    ///         guard let request = Descope.push.cibaRequest(from: userInfo, session: session, allowedHosts: []) else { return }
+    ///         guard !session.refreshToken.isExpired else { return }
+    ///         showApproval(for: request) // e.g., start a DescopeFlow with request.url
+    ///     }
+    ///
+    /// - Parameters:
+    ///   - userInfo: The notification's `userInfo` dictionary.
+    ///   - session: The signed in user's ``DescopeSession``.
+    ///   - allowedHosts: Extra hosts the flow URL may use, such as a custom domain
+    ///     that differs from the SDK's base URL.
+    ///
+    /// - Returns: The request, or `nil` if the notification isn't a valid CIBA request for this user.
+    func cibaRequest(from userInfo: [AnyHashable: Any], session: DescopeSession, allowedHosts: [String]) -> DescopeCIBARequest?
+
+    /// Reads a push sign-in request from a push notification sent by Descope.
+    ///
+    /// Use it in `userNotificationCenter(_:didReceive:withCompletionHandler:)` next to
+    /// ``cibaRequest(from:session:allowedHosts:)``. It returns `nil` unless the notification
+    /// is a Descope push sign-in request for the user of `session`, so a device that another
+    /// user signed in on before doesn't prompt for their sign-ins. It doesn't check the project.
+    ///
+    ///     let userInfo = response.notification.request.content.userInfo
+    ///     if let request = Descope.push.signInRequest(from: userInfo, session: session) {
+    ///         let approved = await askUser()
+    ///         try await Descope.push.finish(transactionId: request.transactionId, approved: approved, refreshJwt: session.refreshJwt)
+    ///     }
+    ///
+    /// - Parameters:
+    ///   - userInfo: The notification's `userInfo` dictionary.
+    ///   - session: The signed in user's ``DescopeSession``.
+    ///
+    /// - Returns: The request, or `nil` if the notification isn't a push sign-in request for this user.
+    func signInRequest(from userInfo: [AnyHashable: Any], session: DescopeSession) -> DescopePushSignInRequest?
 }
 
 
