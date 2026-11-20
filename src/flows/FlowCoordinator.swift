@@ -325,7 +325,7 @@ public class DescopeFlowCoordinator {
             if jwtResponse == nil {
                 logger.info("Finishing flow authentication without an authentication response")
             }
-            return handleSuccess(AuthenticationResponse(sessionToken: session.sessionToken, refreshToken: session.refreshToken, user: session.user, isFirstAuthentication: false, flowOutput: jwtResponse?.flowOutput ?? [:]))
+            return handleSuccess(AuthenticationResponse(sessionToken: session.sessionToken, refreshToken: session.refreshToken, user: session.user, isFirstAuthentication: false, flowOutput: jwtResponse?.flowOutput ?? [:], isExternalPasskey: jwtResponse?.externalPasskey ?? false))
         }
         
         logger.error("Couldn't find session to finish flow", flow?.sessionProvider == nil ? "nil provider" : "custom provider")

@@ -21,7 +21,7 @@ final class Auth: DescopeAuth {
     func migrateSession(externalToken: String) async throws(DescopeError) -> AuthenticationResponse {
         let response: MigrateResponse = try await client.migrate(externalToken: externalToken).convert()
         let user = try await me(refreshJwt: response.refreshToken.jwt)
-        return AuthenticationResponse(sessionToken: response.sessionToken, refreshToken: response.refreshToken, user: user, isFirstAuthentication: false, flowOutput: [:])
+        return AuthenticationResponse(sessionToken: response.sessionToken, refreshToken: response.refreshToken, user: user, isFirstAuthentication: false, flowOutput: [:], isExternalPasskey: false)
     }
 
     func revokeSessions(_ revoke: RevokeType, refreshJwt: String) async throws(DescopeError) {

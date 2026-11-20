@@ -444,6 +444,7 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         var refreshJwt: String?
         var user: UserResponse?
         var firstSeen: Bool?
+        var externalPasskey: Bool?
         var cookieDomain: String?
         var cookieName: String?
         var sessionCookieName: String?
@@ -453,7 +454,7 @@ final class DescopeClient: HTTPClient, @unchecked Sendable {
         // we enumerate the properties explicitly to skip over flowOutput, whose
         // arbitrary JSON object is populated separately in setValues below
         enum CodingKeys: String, CodingKey {
-            case sessionJwt, refreshJwt, user, firstSeen, cookieDomain, cookieName, sessionCookieName, externalToken
+            case sessionJwt, refreshJwt, user, firstSeen, externalPasskey, cookieDomain, cookieName, sessionCookieName, externalToken
         }
 
         mutating func setValues(from data: Data, response: HTTPURLResponse) throws {
